@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeflix - A Te Saját Mozid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --brand: #E50914;
+            --bg: #050505;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: #fff;
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        .hero-gradient {
+            background: radial-gradient(circle at 50% -20%, rgba(229, 9, 20, 0.15), transparent 50%),
+                        radial-gradient(circle at 0% 0%, rgba(229, 9, 20, 0.05), transparent 30%);
+        }
+
+        .bento-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .bento-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(229, 9, 20, 0.4);
+            transform: translateY(-4px);
+        }
+
+        .bento-card-white-fix:hover {
+            background: var(--brand) !important;
+            border-color: var(--brand) !important;
+        }
+
+        .btn-primary {
+            background: var(--brand);
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(229, 9, 20, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(229, 9, 20, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .btn-disabled {
+            opacity: 0.6;
+            cursor: pointer;
+            filter: grayscale(0.5);
+        }
+
+        .code-container {
+            background: #000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+
+        .nav-blur {
+            backdrop-filter: blur(20px);
+            background: rgba(5, 5, 5, 0.8);
+        }
+
+        [data-i18n] { transition: opacity 0.3s ease; }
+        .lang-transition { opacity: 0; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .red-glow {
+            filter: drop-shadow(0 0 15px rgba(229, 9, 20, 0.3));
+        }
+
+        .lang-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .lang-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            border-radius: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-card:hover {
+            background: var(--brand);
+            border-color: var(--brand);
+            transform: scale(1.05);
+        }
+
+        .lang-card.active {
+            background: var(--brand);
+            border-color: var(--brand);
+        }
+
+        .step-number {
+            font-size: 8rem;
+            line-height: 1;
+            font-weight: 900;
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.1);
+            color: transparent;
+            position: absolute;
+            top: -2rem;
+            right: -1rem;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-red-500/50">
+
+    <nav class="fixed top-0 w-full z-[100] nav-blur border-b border-white/5 text-white">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('home')">
+                <div class="w-10 h-10 bg-[#E50914] rounded-xl flex items-center justify-center red-glow">
+                    <i data-lucide="clapperboard" class="text-white w-6 h-6"></i>
+                </div>
+                <span class="text-2xl font-black tracking-tighter uppercase">Homeflix</span>
+            </div>
+            
+            <div class="flex items-center gap-4 lg:gap-6 text-white">
+                <div class="hidden lg:flex items-center gap-8 text-[10px] font-bold tracking-widest uppercase opacity-70">
+                    <button onclick="switchView('howitworks')" data-i18n="nav-how" class="hover:opacity-100 transition-opacity">HASZNÁLAT</button>
+                    <a href="#features" onclick="switchView('home')" data-i18n="nav-features" class="hover:opacity-100 transition-opacity">FUNKCIÓK</a>
+                    <a href="#install" onclick="switchView('home')" data-i18n="nav-install" class="hover:opacity-100 transition-opacity">TELEPÍTÉS</a>
+                    <a href="#donate" onclick="switchView('home')" data-i18n="nav-donate" class="hover:opacity-100 transition-opacity">TÁMOGATÁS</a>
+                </div>
+
+                <div class="h-6 w-[1px] bg-white/10 hidden lg:block text-white"></div>
+
+                <button onclick="toggleModal('lang-modal')" class="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/10 transition-all">
+                    <i data-lucide="globe" class="w-4 h-4 opacity-50"></i>
+                    <span id="current-lang-label">HU</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- LANDING PAGE VIEW -->
+    <div id="view-home" class="view-content">
+        <main class="hero-gradient">
+            <section class="pt-44 pb-32 px-6 text-center text-white">
+                <div class="max-w-5xl mx-auto">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 text-red-500">
+                        <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                        <span data-i18n="hero-badge">Személyes projekt - Fejlesztés alatt (2026)</span>
+                    </div>
+                    <h1 class="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-8">
+                        <span data-i18n="hero-t1">A TE MOZID,</span> <br/>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40" data-i18n="hero-t2">A TE SZABÁLYAID</span>
+                    </h1>
+                    <p class="text-xl text-white/50 max-w-2xl mx-auto mb-12 font-medium" data-i18n="hero-desc">
+                        Ezt a rendszert azért hoztam létre, hogy életre keltsem a filmgyűjteményedet. Intelligens, önműködő és teljesen ingyenes.
+                    </p>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <button onclick="toggleModal('soon-modal')" class="btn-primary btn-disabled px-10 py-5 rounded-2xl font-extrabold flex items-center gap-3">
+                            <i data-lucide="rocket" class="w-5 h-5 text-white"></i>
+                            <span data-i18n="hero-btn-start">Próbáld ki</span>
+                        </button>
+                        <a href="https://github.com" target="_blank" class="px-10 py-5 rounded-2xl bg-white/5 border border-white/10 font-bold hover:bg-white/10 transition-all flex items-center gap-3 text-white">
+                            <i data-lucide="github" class="w-5 h-5"></i>
+                            <span data-i18n="hero-btn-gh">Forráskód</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bento Features -->
+            <section id="features" class="py-20 px-6 text-white text-left">
+                <div class="max-w-7xl mx-auto">
+                    <div class="grid md:grid-cols-6 gap-6 h-full">
+                        <div class="md:col-span-4 bento-card p-10 flex flex-col justify-between group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-64 h-64 bg-red-600/10 blur-[100px] -z-10 group-hover:bg-red-600/20 transition-all"></div>
+                            <div>
+                                <div class="w-12 h-12 bg-red-600/20 rounded-xl flex items-center justify-center mb-6">
+                                    <i data-lucide="sparkles" class="text-red-500"></i>
+                                </div>
+                                <h3 class="text-3xl font-black mb-4 tracking-tight" data-i18n="feat-ai-t">Okos Feliratozás</h3>
+                                <p class="text-white/60 max-w-md leading-relaxed" data-i18n="feat-ai-d">
+                                    Nincs felirat a filmhez? Megoldottam. A Homeflix "meghallgatja" a filmet és elkészíti neked a magyar szöveget. Mindezt otthon, internet és token-költségek nélkül.
+                                </p>
+                            </div>
+                            <div class="mt-8 flex flex-wrap gap-4">
+                                <span class="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-white/50 uppercase tracking-widest">Local AI</span>
+                                <span class="px-3 py-1 bg-red-600/20 border border-red-600/40 rounded-lg text-[10px] font-bold uppercase text-red-500" data-i18n="feat-ai-free">100% Ingyenes</span>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 bento-card p-10 flex flex-col justify-between text-white">
+                            <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-6">
+                                <i data-lucide="library" class="text-blue-500"></i>
+                            </div>
+                            <h3 class="text-xl font-bold mb-2" data-i18n="feat-tmdb-t">Rendezett Gyűjtemény</h3>
+                            <p class="text-sm text-white/50 leading-relaxed" data-i18n="feat-tmdb-d">A rendszer automatikusan felismeri a filmjeidet és letölti a borítókat a TMDB adatbázisából.</p>
+                        </div>
+
+                        <div class="md:col-span-3 bento-card p-10 flex flex-col justify-center items-center text-center">
+                            <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-6 text-white">
+                                <i data-lucide="zap" class="text-green-500 w-8 h-8"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold mb-3" data-i18n="feat-stream-t">Villámgyors Motor</h3>
+                            <p class="text-sm text-white/50 max-w-xs" data-i18n="feat-stream-d">A Rust backend és az FFmpeg együttműködése biztosítja, hogy a filmjeid azonnal, akadozás nélkül induljanak el.</p>
+                        </div>
+
+                        <div class="md:col-span-3 bento-card p-10 bg-gradient-to-br from-red-600/[0.05] to-transparent">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-xl font-bold tracking-tight text-white" data-i18n="feat-roadmap-t">Érkező Funkciók</h3>
+                                <div class="px-2 py-1 bg-white/5 border border-white/10 rounded-md text-[8px] font-black uppercase text-white/40">Next Gen</div>
+                            </div>
+                            <ul class="space-y-4">
+                                <li class="flex items-start gap-3 text-white">
+                                    <i data-lucide="cast" class="w-5 h-5 text-white/60"></i>
+                                    <div class="text-left">
+                                        <p class="text-sm font-bold text-white/80">Chromecast Support</p>
+                                        <p class="text-[10px] text-white/40" data-i18n="feat-roadmap-cast">Vezeték nélküli lejátszás közvetlenül a TV-re.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start gap-3 text-white">
+                                    <i data-lucide="fast-forward" class="w-5 h-5 text-white/60"></i>
+                                    <div class="text-left">
+                                        <p class="text-sm font-bold text-white/80">Skip Intro & Recap</p>
+                                        <p class="text-[10px] text-white/40" data-i18n="feat-roadmap-skip">A háttérben futó algoritmus felismeri az ismétléseket, és felajánlja az átugrást.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="md:col-span-6 bento-card p-10 bg-white/[0.01]">
+                            <div class="flex items-center justify-between mb-8">
+                                <h3 class="text-xl font-bold tracking-tight text-white" data-i18n="specs-title">Hardverigény</h3>
+                                <i data-lucide="monitor" class="text-white/20"></i>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1">VRAM</p>
+                                    <p class="text-2xl font-black text-red-500">8GB</p>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1">SYS RAM</p>
+                                    <p class="text-2xl font-black text-white">32GB</p>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1">Tárhely</p>
+                                    <p class="text-2xl font-black text-white">32GB+</p>
+                                </div>
+                            </div>
+                            <p class="mt-6 text-[10px] text-white/30 italic leading-relaxed" data-i18n="specs-note">Úgy optimalizáltam, hogy egy RTX 3050 szintű kártyán már tökéletesen fussanak az AI modellek.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Install Section -->
+            <section id="install" class="py-24 px-6 bg-white/[0.01] text-white">
+                <div class="max-w-4xl mx-auto">
+                    <div class="text-center mb-16">
+                        <h2 class="text-4xl font-black mb-6 tracking-tighter" data-i18n="install-title">Telepítési Útmutató</h2>
+                        <p class="text-white/60 leading-relaxed text-sm max-w-2xl mx-auto text-left" data-i18n="install-precise">
+                            Ezt a rendszert kifejezetten dedikált otthoni szerverekre terveztem, amik Docker-t futtatnak. A célom az volt, hogy egy RTX 3050 GPU-val már stabilan működjön az AI alapú feldolgozás. A gyors streaming érdekében érdemes 720p vagy 1080p felbontású videókat használnod, lehetőleg H.264 vagy H.265 enkodolással.
+                        </p>
+                        <div class="mt-8 inline-block px-4 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-500 text-[10px] font-bold uppercase tracking-widest" data-i18n="status-dev">
+                            Még dolgozom rajta - 2026 elején várható!
+                        </div>
+                    </div>
+                    
+                    <div class="code-container shadow-2xl text-white">
+                        <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+                            <div class="flex gap-1.5">
+                                <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+                            </div>
+                            <button onclick="copyCode()" class="text-[10px] font-bold uppercase tracking-widest opacity-40 hover:opacity-100 flex items-center gap-2">
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                                <span data-i18n="copy">Másolás</span>
+                            </button>
+                        </div>
+                        <div class="p-8 overflow-x-auto">
+                            <pre class="text-sm font-mono text-white/70 leading-loose" id="code-content"><code><span class="text-blue-400">services:</span>
+  <span class="text-red-400">homeflix-web:</span>
+    <span class="text-white/40">image:</span> ghcr.io/homeflix/web:latest
+    <span class="text-white/40">ports:</span> ["5173:5173"]
+
+  <span class="text-red-400">homeflix-server:</span>
+    <span class="text-white/40">image:</span> ghcr.io/homeflix/server:latest
+    <span class="text-white/40">environment:</span>
+      - TMDB_API_KEY=YOUR_FREE_KEY
+    <span class="text-white/40">volumes:</span>
+      - /path/to/movies:/data/movies
+      - ./db:/app/database
+
+  <span class="text-red-400">subtitle-worker:</span>
+    <span class="text-white/40">image:</span> ghcr.io/homeflix/worker:latest
+
+  <span class="text-red-400">ollama:</span>
+    <span class="text-white/40">image:</span> ollama/ollama:latest</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- HOW IT WORKS VIEW -->
+    <div id="view-howitworks" class="view-content hidden text-white">
+        <section class="pt-44 pb-32 px-6">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-24">
+                    <h2 class="text-5xl md:text-7xl font-black tracking-tighter mb-8" data-i18n="how-title">Hogyan működik?</h2>
+                    <p class="text-xl text-white/50 max-w-2xl mx-auto" data-i18n="how-subtitle">Egy profi rendszer, ami pofonegyszerűvé teszi az otthoni filmezést.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-12 text-white">
+                    <div class="bento-card p-10 relative">
+                        <span class="step-number text-white">01</span>
+                        <div class="z-10 relative text-left">
+                            <div class="w-14 h-14 bg-red-600/20 rounded-2xl flex items-center justify-center mb-8">
+                                <i data-lucide="server" class="text-red-500 w-8 h-8 text-white"></i>
+                            </div>
+                            <h3 class="text-2xl font-black mb-4 tracking-tight" data-i18n="how-s1-t">Telepítés</h3>
+                            <p class="text-white/50 leading-relaxed" data-i18n="how-s1-d">Telepítsd a Homeflixet egy Docker-t futtató dedikált gépre. Úgy terveztem, hogy egy RTX 3050-en is szárnyaljon.</p>
+                        </div>
+                    </div>
+
+                    <div class="bento-card p-10 relative">
+                        <span class="step-number text-white">02</span>
+                        <div class="z-10 relative text-left">
+                            <div class="w-14 h-14 bg-blue-600/20 rounded-2xl flex items-center justify-center mb-8">
+                                <i data-lucide="folder-open" class="text-blue-500 w-8 h-8"></i>
+                            </div>
+                            <h3 class="text-2xl font-black mb-4 tracking-tight" data-i18n="how-s2-t">Tartalom</h3>
+                            <p class="text-white/50 leading-relaxed" data-i18n="how-s2-d">Tedd elérhetővé a filmjeidet egy mappában. A rendszer automatikusan átvizsgálja és rendszerezi őket számodra.</p>
+                        </div>
+                    </div>
+
+                    <div class="bento-card p-10 relative">
+                        <span class="step-number text-white">03</span>
+                        <div class="z-10 relative text-left">
+                            <div class="w-14 h-14 bg-purple-600/20 rounded-2xl flex items-center justify-center mb-8">
+                                <i data-lucide="layout" class="text-purple-500 w-8 h-8"></i>
+                            </div>
+                            <h3 class="text-2xl font-black mb-4 tracking-tight" data-i18n="how-s3-t">Böngészés</h3>
+                            <p class="text-white/50 leading-relaxed" data-i18n="how-s3-d">Nyisd meg a Homeflix webes felületét bármilyen eszközről, és válaszd ki, mit szeretnél nézni.</p>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 bento-card p-10 relative text-left">
+                        <span class="step-number text-white">04</span>
+                        <div class="z-10 relative flex flex-col md:flex-row gap-12 items-center">
+                            <div class="flex-1 text-left">
+                                <div class="w-14 h-14 bg-green-600/20 rounded-2xl flex items-center justify-center mb-8">
+                                    <i data-lucide="sparkles" class="text-green-500 w-8 h-8"></i>
+                                </div>
+                                <h3 class="text-3xl font-black mb-4 tracking-tight" data-i18n="how-s4-t">AI Feliratozás</h3>
+                                <p class="text-white/50 leading-relaxed text-lg" data-i18n="how-s4-d">Nincs felirat? Csak kattints az automatikus generálásra. Menj, főzz egy kávét, amíg az AI elvégzi a munkát helyetted.</p>
+                            </div>
+                            <div class="flex-shrink-0 bg-white/5 p-8 rounded-3xl border border-white/10 text-center">
+                                <i data-lucide="coffee" class="w-12 h-12 text-orange-500 mx-auto mb-4 animate-bounce"></i>
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-white/30" data-i18n="how-s4-status">Processing...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bento-card p-10 relative bg-white text-black text-left">
+                        <span class="step-number text-black" style="-webkit-text-stroke: 1px rgba(0,0,0,0.1)">05</span>
+                        <div class="z-10 relative text-left">
+                            <div class="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center mb-8 text-white">
+                                <i data-lucide="play" class="text-white w-8 h-8 fill-current"></i>
+                            </div>
+                            <h3 class="text-2xl font-black mb-4 tracking-tight text-black" data-i18n="how-s5-t">Moziélmény</h3>
+                            <p class="text-black/60 font-medium leading-relaxed" data-i18n="how-s5-d">Mire visszaérsz, a felirat elkészült. Nézd a filmet eredeti hangon, a saját nyelveden feliratozva.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-24 text-center">
+                    <button onclick="switchView('home')" class="btn-primary px-10 py-5 rounded-2xl font-extrabold flex items-center gap-3 mx-auto text-white">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        <span data-i18n="how-back">Vissza a főoldalra</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Common Donate Section -->
+    <section id="donate" class="py-32 px-6 text-white text-center">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-5xl font-black mb-4 tracking-tighter" data-i18n="donate-title">Segíts a fejlődésben</h2>
+            <p class="text-white/40 max-w-xl mx-auto mb-16" data-i18n="donate-desc">A Homeflix nyílt forráskódú és ingyenes marad. Ha tetszik a projekt, támogasd a munkámat!</p>
+
+            <div class="grid md:grid-cols-4 gap-4">
+                <a href="https://github.com/sponsors/YOUR_USER" target="_blank" class="md:col-span-2 bento-card bento-card-white-fix p-10 bg-white text-black flex flex-col justify-between group text-left transition-all">
+                    <div class="flex justify-between items-start">
+                        <i data-lucide="github" class="w-12 h-12 group-hover:text-white transition-colors text-black"></i>
+                        <div class="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-transparent group-hover:border-white/20">Recommended</div>
+                    </div>
+                    <div class="mt-12 text-left">
+                        <h3 class="text-3xl font-black mb-2 tracking-tighter group-hover:text-white transition-colors text-black">GitHub Sponsors</h3>
+                        <p class="text-black/60 font-medium group-hover:text-white/80 transition-colors" data-i18n="donate-gh">Legyél hivatalos támogatónk a GitHubon!</p>
+                    </div>
+                    <div class="mt-8 flex items-center gap-2 font-bold uppercase text-xs group-hover:text-white transition-colors text-black">
+                        <span data-i18n="donate-go">Tovább</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-2 transition-transform text-black group-hover:text-white"></i>
+                    </div>
+                </a>
+
+                <a href="https://buymeacoffee.com/YOUR_USER" target="_blank" class="bento-card p-8 flex flex-col justify-between group text-left">
+                    <i data-lucide="coffee" class="text-[#FFDD00] w-10 h-10"></i>
+                    <h4 class="text-xl font-bold mt-12 text-white">Buy Me a Coffee</h4>
+                    <div class="mt-4 flex items-center gap-2 opacity-40 group-hover:opacity-100 transition-opacity text-white">
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </div>
+                </a>
+
+                <button onclick="toggleModal('crypto-modal')" class="bento-card p-8 flex flex-col justify-between group text-left text-white">
+                    <i data-lucide="bitcoin" class="text-orange-500 w-10 h-10 text-white"></i>
+                    <h4 class="text-xl font-bold mt-12 text-white">Crypto</h4>
+                    <p class="text-[10px] font-bold text-white/30 uppercase mt-2">BTC / ETH / SOL</p>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modals -->
+    <div id="lang-modal" class="modal-overlay text-white">
+        <div class="w-full max-w-4xl p-8 bg-[#111] rounded-[32px] border border-white/10 shadow-2xl relative">
+            <button onclick="toggleModal('lang-modal')" class="absolute top-8 right-8 text-white/20 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-8 h-8"></i>
+            </button>
+            <h2 class="text-4xl font-black mb-12 tracking-tighter text-center">Válassz nyelvet / Select Language</h2>
+            <div id="lang-grid" class="lang-grid mx-auto"></div>
+        </div>
+    </div>
+
+    <div id="soon-modal" class="modal-overlay text-white">
+        <div class="bg-[#111] max-w-lg w-full rounded-[32px] p-12 border border-white/10 relative shadow-2xl text-center">
+            <button onclick="toggleModal('soon-modal')" class="absolute top-8 right-8 text-white/20 hover:text-white"><i data-lucide="x"></i></button>
+            <div class="w-20 h-20 bg-red-600/20 rounded-3xl flex items-center justify-center mx-auto mb-8 text-white">
+                <i data-lucide="rocket" class="text-red-500 w-10 h-10"></i>
+            </div>
+            <h3 class="text-3xl font-black mb-4 tracking-tighter" data-i18n="modal-soon-title">Hamarosan!</h3>
+            <p class="text-white/50 leading-relaxed mb-8 font-medium" data-i18n="modal-soon-desc">A rendszer jelenleg fejlesztés alatt áll. Köszönöm a türelmedet, 2026 elején már használhatod a saját mozidat!</p>
+            <button onclick="toggleModal('soon-modal')" class="w-full py-4 bg-white/5 hover:bg-white/10 rounded-xl font-bold border border-white/10 transition-all uppercase text-xs tracking-widest text-white">Bezárás</button>
+        </div>
+    </div>
+
+    <div id="crypto-modal" class="modal-overlay text-white text-left">
+        <div class="bg-[#111] max-w-lg w-full rounded-[32px] p-10 border border-white/10 relative">
+            <button onclick="toggleModal('crypto-modal')" class="absolute top-8 right-8 text-white/20 hover:text-white"><i data-lucide="x"></i></button>
+            <h3 class="text-3xl font-black mb-8 tracking-tighter">Crypto Wallet</h3>
+            <div class="space-y-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-white/30 tracking-widest text-white">Bitcoin (BTC)</label>
+                    <div class="flex gap-2">
+                        <input readonly value="YOUR_BTC_ADDRESS" class="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono w-full text-white" id="btc-addr">
+                        <button onclick="copyAddr('btc-addr')" class="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-white"><i data-lucide="copy" class="w-4 h-4 text-red-500"></i></button>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-white/30 tracking-widest text-white">Ethereum (ETH)</label>
+                    <div class="flex gap-2 text-white">
+                        <input readonly value="YOUR_ETH_ADDRESS" class="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono w-full text-white" id="eth-addr">
+                        <button onclick="copyAddr('eth-addr')" class="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-white"><i data-lucide="copy" class="w-4 h-4 text-red-500"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-20 px-6 border-t border-white/5 text-center md:text-left text-white/20">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12 text-white">
+            <div class="flex items-center gap-2 text-white">
+                <div class="w-6 h-6 bg-[#E50914] rounded flex items-center justify-center text-white"><i data-lucide="clapperboard" class="text-white w-3 h-3"></i></div>
+                <span class="font-black uppercase tracking-tighter text-white">Homeflix</span>
+            </div>
+            <div class="flex gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+                <a href="https://github.com" class="hover:text-red-500 transition-colors">GitHub</a>
+            </div>
+            <p class="text-[10px] uppercase font-bold text-white/20" data-i18n="footer-copy">© 2026 HOMEFLIX PROJEKT</p>
+        </div>
+    </footer>
+
+    <script>
+        const translations = {
+            hu: {
+                "nav-how": "HASZNÁLAT", "nav-features": "FUNKCIÓK", "nav-install": "TELEPÍTÉS", "nav-donate": "TÁMOGATÁS",
+                "hero-badge": "Személyes projekt - Fejlesztés alatt (2026)",
+                "hero-t1": "A TE MOZID,", "hero-t2": "A TE SZABÁLYAID",
+                "hero-desc": "Ezt a rendszert azért hoztam létre, hogy életre keltsem a filmgyűjteményedet. Intelligens, önműködő és teljesen ingyenes.",
+                "hero-btn-start": "Próbáld ki", "hero-btn-gh": "Forráskód",
+                "feat-ai-t": "Okos Feliratozás",
+                "feat-ai-d": "Nincs felirat a filmhez? Megoldottam. A Homeflix 'meghallgatja' a filmet és elkészíti neked a magyar szöveget. Mindezt otthon, internet és token-költségek nélkül.",
+                "feat-ai-free": "100% Ingyenes",
+                "feat-tmdb-t": "Rendezett Gyűjtemény",
+                "feat-tmdb-d": "A rendszer automatikusan felismeri a filmjeidet és letölti a borítókat a TMDB adatbázisából.",
+                "feat-stream-t": "Villámgyors Motor",
+                "feat-stream-d": "A Rust backend és az FFmpeg együttműködése biztosítja a zökkenőmentes élményt.",
+                "feat-roadmap-t": "Érkező Funkciók",
+                "feat-roadmap-cast": "Vezeték nélküli lejátszás közvetlenül a TV-re.",
+                "feat-roadmap-skip": "A háttérben futó algoritmus felismeri az ismétléseket, és felajánlja az átugrást.",
+                "specs-title": "Hardverigény", "specs-note": "Úgy optimalizáltam, hogy egy RTX 3050 szintű kártyán már tökéletesen fussanak az AI modellek.",
+                "install-title": "Telepítési Útmutató",
+                "install-precise": "Ezt a rendszert kifejezetten dedikált otthoni szerverekre terveztem, amik Docker-t futtatnak. A célom az volt, hogy egy RTX 3050 GPU-val már stabilan működjön az AI alapú feldolgozás. A gyors streaming érdekében érdemes 720p vagy 1080p felbontású videókat használnod (H.264/H.265).",
+                "status-dev": "Még dolgozom rajta - 2026 elején várható!",
+                "how-title": "Hogyan működik?", "how-subtitle": "Egy profi rendszer, ami pofonegyszerűvé teszi az otthoni filmezést.",
+                "how-s1-t": "Telepítés", "how-s1-d": "Telepítsd a Homeflixet egy Docker-t futtató dedikált gépre. Úgy terveztem, hogy egy RTX 3050-en is szárnyaljon.",
+                "how-s2-t": "Tartalom", "how-s2-d": "Tedd elérhetővé a filmjeidet egy mappában. A rendszer automatikusan átvizsgálja és rendszerezi őket számodra.",
+                "how-s3-t": "Böngészés", "how-s3-d": "Nyisd meg a Homeflix webes felületét bármilyen eszközről, és válaszd ki, mit szeretnél nézni.",
+                "how-s4-t": "AI Feliratozás", "how-s4-d": "Nincs felirat? Csak kattints az automatikus generálásra. Menj, főzz egy kávét, amíg az AI elvégzi a munkát helyetted.",
+                "how-s5-t": "Moziélmény", "how-s5-d": "Mire visszaérsz, a felirat elkészült. Nézd a filmet eredeti hangon, a saját nyelveden feliratozva.",
+                "how-s4-status": "Felirat generálása...", "how-back": "Vissza a főoldalra",
+                "modal-soon-title": "Hamarosan!", "modal-soon-desc": "A rendszer jelenleg fejlesztés alatt áll. Köszönöm a türelmedet, 2026 elején már használhatod a saját mozidat!",
+                "copy": "Másolás", "copied": "Másolva!",
+                "donate-title": "Segíts a fejlődésben", "donate-desc": "A Homeflix nyílt forráskódú és ingyenes marad. Ha tetszik a projekt, támogasd a munkámat!",
+                "donate-gh": "Legyél hivatalos támogatónk a GitHubon!", "donate-go": "Tovább", "footer-copy": "© 2026 HOMEFLIX PROJEKT"
+            },
+            en: {
+                "nav-how": "USAGE", "nav-features": "FEATURES", "nav-install": "INSTALL", "nav-donate": "DONATE",
+                "hero-badge": "Personal Project - Under Development (2026)",
+                "hero-t1": "YOUR CINEMA,", "hero-t2": "YOUR RULES",
+                "hero-desc": "I created this system to bring your movie collection to life. Intelligent, automated, and completely free.",
+                "hero-btn-start": "Try it out", "hero-btn-gh": "Source Code",
+                "feat-ai-t": "Smart Subtitles",
+                "feat-ai-d": "No subtitles? I've got you covered. Homeflix 'listens' to the movie and creates text for you locally, without token costs.",
+                "feat-ai-free": "100% Free",
+                "feat-tmdb-t": "Organized Library",
+                "feat-tmdb-d": "The system automatically recognizes your movies and downloads covers from the TMDB database.",
+                "feat-stream-t": "Lightning Engine",
+                "feat-stream-d": "The collaboration between Rust and FFmpeg ensures a seamless experience.",
+                "feat-roadmap-t": "Upcoming Features",
+                "feat-roadmap-cast": "Wireless playback directly to your TV.",
+                "feat-roadmap-skip": "Background algorithm detects repetitions and offers a skip button.",
+                "specs-title": "Specs", "specs-storage": "Storage", "specs-note": "Optimized to run AI models perfectly even on an RTX 3050 grade video card.",
+                "install-title": "Installation Guide",
+                "install-precise": "I designed this specifically for dedicated home servers running Docker with RTX 3050 GPU. Use 720p/1080p H.264/H.265 for fast streaming.",
+                "status-dev": "Still working on it - Coming early 2026!",
+                "how-title": "How it works?", "how-subtitle": "A professional system for effortless home cinema.",
+                "how-s1-t": "Installation", "how-s1-d": "Install Homeflix via Docker on a dedicated machine. Built for RTX 3050 performance.",
+                "how-s2-t": "Content", "how-s2-d": "Place your movies in a folder. The system will scan and organize them for you.",
+                "how-s3-t": "Browsing", "how-s3-d": "Open the web interface from any device and pick your movie.",
+                "how-s4-t": "AI Subtitles", "how-s4-d": "Click generate, go grab a coffee while the AI does the work for you.",
+                "how-s5-t": "Cinema Experience", "how-s5-d": "Subtitles are ready when you're back. Enjoy original audio with your language text.",
+                "how-s4-status": "Generating...", "how-back": "Back to Home",
+                "modal-soon-title": "Coming Soon!", "modal-soon-desc": "Under development. Early 2026 release!",
+                "copy": "Copy", "copied": "Copied!",
+                "donate-title": "Support", "donate-desc": "Remains free and open-source.",
+                "donate-gh": "Become a GitHub Sponsor!", "donate-go": "Next", "footer-copy": "© 2026 HOMEFLIX PROJECT"
+            },
+            de: { "nav-how": "NUTZUNG", "nav-features": "FUNKTIONEN", "nav-install": "INSTALLATION", "nav-donate": "SPENDEN", "how-title": "Wie es funktioniert", "how-back": "Zurück", "how-s1-t": "Installation", "how-s2-t": "Inhalt", "how-s3-t": "Browsen", "how-s4-t": "KI-Untertitel", "how-s5-t": "Kinoerlebnis", "hero-badge": "Projekt 2026", "hero-t1": "DEIN KINO,", "hero-t2": "DEINE REGELN", "hero-desc": "Ich habe dieses System für dich entwickelt.", "install-title": "Installation", "install-precise": "Entwickelt für Docker-Heimserver mit RTX 3050. Nutzen Sie 720p/1080p (H.264/H.265).", "status-dev": "Anfang 2026!", "modal-soon-title": "Bald!", "modal-soon-desc": "Verfügbar Anfang 2026!", "copy": "Kopieren", "copied": "Kopiert!", "footer-copy": "© 2026 HOMEFLIX PROJEKT" },
+            fr: { "nav-how": "UTILISATION", "nav-features": "FONCTIONS", "nav-install": "INSTALLATION", "nav-donate": "DON", "how-title": "Fonctionnement", "how-back": "Retour", "how-s1-t": "Installation", "how-s2-t": "Contenu", "how-s3-t": "Navigation", "how-s4-t": "Sous-titres IA", "how-s5-t": "Expérience", "hero-badge": "Projet 2026", "hero-t1": "TON CINÉMA,", "hero-t2": "TES RÈGLES", "hero-desc": "J'ai créé ce système pour toi.", "install-title": "Installation", "install-precise": "Conçu pour serveurs Docker avec RTX 3050. Utilisez du 720p/1080p (H.264/H.265).", "status-dev": "Début 2026 !", "modal-soon-title": "Bientôt !", "modal-soon-desc": "Disponible début 2026 !", "copy": "Copier", "copied": "Copié !", "footer-copy": "© 2026 PROJET HOMEFLIX" },
+            pl: { "nav-how": "UŻYCIE", "nav-features": "FUNKCJE", "nav-install": "INSTALACJA", "nav-donate": "WESPRZYJ", "how-title": "Jak to działa", "how-back": "Wróć", "how-s1-t": "Instalacja", "how-s2-t": "Zawartość", "how-s3-t": "Przeglądanie", "how-s4-t": "Napisy AI", "how-s5-t": "Oglądanie", "hero-badge": "Projekt 2026", "hero-t1": "TWOJE KINO,", "hero-t2": "TWOJE ZASADY", "hero-desc": "Stworzyłem ten system dla Ciebie.", "install-title": "Instalacja", "install-precise": "Dla serwerów Docker z RTX 3050. Używaj 720p/1080p (H.264/H.265).", "status-dev": "Początek 2026!", "modal-soon-title": "Wkrótce!", "modal-soon-desc": "Na początku 2026!", "copy": "Kopiuj", "copied": "Skopiowano!", "footer-copy": "© 2026 PROJEKT HOMEFLIX" },
+            ro: { "nav-how": "UTILIZARE", "nav-features": "FUNCȚII", "nav-install": "INSTALARE", "nav-donate": "DONEAZĂ", "how-title": "Cum funcționează", "how-back": "Înapoi", "how-s1-t": "Instalare", "how-s2-t": "Conținut", "how-s3-t": "Navigare", "how-s4-t": "Subtitrări IA", "how-s5-t": "Vizionare", "hero-badge": "Proiect 2026", "hero-t1": "CINEMATOGRAFUL TĂU,", "hero-t2": "REGULILE TALE", "hero-desc": "Am creat acest sistem pentru tine.", "install-title": "Instalare", "install-precise": "Pentru servere Docker cu RTX 3050. Folosiți 720p/1080p (H.264/H.265).", "status-dev": "Începutul lui 2026!", "modal-soon-title": "Curând!", "modal-soon-desc": "În curând 2026!", "copy": "Copiază", "copied": "Copiat!", "footer-copy": "© 2026 PROIECTUL HOMEFLIX" },
+            bg: { "nav-how": "УПОТРЕБА", "nav-features": "ФУНКЦИИ", "nav-install": "ИНСТАЛАЦИЯ", "nav-donate": "ДАРЕНИЕ", "hero-badge": "2026", "hero-t1": "ТВОЕТО КИНО,", "hero-t2": "ТВОИТЕ ПРАВИЛА", "install-title": "Инсталация", "install-precise": "Docker и RTX 3050. Използвайте 720p/1080p.", "status-dev": "2026!", "how-title": "Как работи", "copy": "Копирай", "copied": "Копирано!", "footer-copy": "© 2026 HOMEFLIX ПРОЕКТ" },
+            hr: { "nav-how": "UPOTREBA", "nav-features": "ZNAČAJKE", "nav-install": "INSTALACIJA", "nav-donate": "DONIRAJ", "hero-badge": "2026", "hero-t1": "TVOJE KINO,", "hero-t2": "TVOJA PRAVILA", "install-title": "Instalacija", "install-precise": "Docker i RTX 3050. Koristite 720p/1080p.", "status-dev": "Početak 2026!", "how-title": "Kako radi", "copy": "Kopiraj", "copied": "Kopirano!", "footer-copy": "© 2026 PROJEKT HOMEFLIX" },
+            cs: { "nav-how": "POUŽITÍ", "nav-features": "FUNKCE", "nav-install": "INSTALACE", "nav-donate": "PŘISPĚT", "hero-badge": "2026", "hero-t1": "TVÉ KINO,", "hero-t2": "TVÁ PRAVIDLA", "install-title": "Instalace", "install-precise": "Docker a RTX 3050. Použijte 720p/1080p.", "status-dev": "2026!", "how-title": "Jak to funguje", "copy": "Kopírovat", "copied": "Zkopírováno!", "footer-copy": "© 2026 PROJEKT HOMEFLIX" },
+            da: { "nav-how": "BRUG", "nav-features": "FUNKTIONER", "nav-install": "INSTALLATION", "nav-donate": "DONÉR", "hero-badge": "2026", "hero-t1": "DIT KINO,", "hero-t2": "DINE REGLER", "install-title": "Installation", "install-precise": "Docker og RTX 3050. Brug 720p/1080p.", "status-dev": "2026!", "how-title": "Hvordan det virker", "copy": "Kopiér", "copied": "Kopieret!", "footer-copy": "© 2026 HOMEFLIX PROJEKT" },
+            nl: { "nav-how": "GEBRUIK", "nav-features": "KENMERKEN", "nav-install": "INSTALLATIE", "nav-donate": "DONEREN", "hero-badge": "2026", "hero-t1": "JOUW KINO,", "hero-t2": "JOUW REGELS", "install-title": "Installatie", "install-precise": "Docker en RTX 3050. Gebruik 720p/1080p.", "status-dev": "2026!", "how-title": "Hoe het werkt", "copy": "Kopiëren", "copied": "Gekopieerd!", "footer-copy": "© 2026 HOMEFLIX PROJECT" },
+            et: { "nav-how": "KASUTUS", "nav-features": "FUNKTSIOONID", "nav-install": "INSTALLIMINE", "nav-donate": "TOETA", "hero-badge": "2026", "hero-t1": "SINU KINO,", "hero-t2": "SINU REEGLID", "install-title": "Installimine", "install-precise": "Docker ja RTX 3050. Kasuta 720p/1080p.", "status-dev": "2026!", "how-title": "Kuidas see käib", "copy": "Kopeeri", "copied": "Kopeeritud!", "footer-copy": "© 2026 HOMEFLIX PROJEKT" },
+            fi: { "nav-how": "KÄYTTÖ", "nav-features": "OMINAISUUDET", "nav-install": "ASENNUS", "nav-donate": "LAHJOITA", "hero-badge": "2026", "hero-t1": "SINUN ELOKUVASI,", "hero-t2": "SINUN SÄÄNTÖSI", "install-title": "Asennus", "install-precise": "Docker ja RTX 3050. Käytä 720p/1080p.", "status-dev": "2026!", "how-title": "Miten se toimii", "copy": "Kopioi", "copied": "Kopioitu!", "footer-copy": "© 2026 HOMEFLIX PROJECT" },
+            el: { "nav-how": "ΧΡΗΣΗ", "nav-features": "ΛΕΙΤΟΥΡΓΙΕΣ", "nav-install": "ΕΓΚΑΤΑΣΤΑΣΗ", "nav-donate": "ΔΩΡΕΑ", "hero-badge": "2026", "hero-t1": "ΤΟ ΔΙΚΟ ΣΟΥ ΣΙΝΕΜΑ,", "hero-t2": "ΟΙ ΔΙΚΟΙ ΣΟΥ ΚΑΝΟΝΕΣ", "install-title": "Εγκατάσταση", "install-precise": "Docker και RTX 3050. Χρήση 720p/1080p.", "status-dev": "2026!", "how-title": "Πώς λειτουργεί", "copy": "Αντιγραφή", "copied": "Αντιγράφηκε!", "footer-copy": "© 2026 HOMEFLIX PROJECT" },
+            ga: { "nav-how": "ÚSÁID", "nav-features": "GNÉITHE", "nav-install": "SUITEÁIL", "nav-donate": "TABHAIR", "hero-badge": "2026", "hero-t1": "DO CHINEAMA FÉIN,", "hero-t2": "DO RIALACHA FÉIN", "install-title": "Suiteáil", "install-precise": "Docker agus RTX 3050. Bain úsáid as 720p/1080p.", "status-dev": "2026!", "how-title": "Conas a oibríonn sé", "copy": "Cóipeáil", "copied": "Cóipeáilte!", "footer-copy": "© 2026 HOMEFLIX" },
+            it: { "nav-how": "UTILIZZO", "nav-features": "FUNZIONI", "nav-install": "INSTALLAZIONE", "nav-donate": "DONA", "hero-badge": "2026", "hero-t1": "IL TUO CINEMA,", "hero-t2": "LE TUE REGOLE", "install-title": "Installazione", "install-precise": "Docker e RTX 3050. Usa 720p/1080p.", "status-dev": "Inizio 2026!", "how-title": "Come funziona", "copy": "Copia", "copied": "Copiato!", "footer-copy": "© 2026 PROGETTO HOMEFLIX" },
+            lv: { "nav-how": "LIETOŠANA", "nav-features": "FUNKCIJAS", "nav-install": "INSTALĒŠANA", "nav-donate": "ZIEDOT", "hero-badge": "2026", "hero-t1": "TAVS KINO,", "hero-t2": "TAVI NOTEIKUMI", "install-title": "Instalēšana", "install-precise": "Docker un RTX 3050. Izmanto 720p/1080p.", "status-dev": "2026!", "how-title": "Kā tas darbojas", "copy": "Kopēt", "copied": "Nokopēts!", "footer-copy": "© 2026 HOMEFLIX PROJEKTS" },
+            lt: { "nav-how": "NAUDOJIMAS", "nav-features": "FUNKCIJOS", "nav-install": "INSTALIAVIMAS", "nav-donate": "PAREMT", "hero-badge": "2026", "hero-t1": "TAVO KINAS,", "hero-t2": "TAVO TAISYKLĖS", "install-title": "Instaliacija", "install-precise": "Docker ir RTX 3050. Naudok 720p/1080p.", "status-dev": "2026!", "how-title": "Kaip tai veikia", "copy": "Kopijuoti", "copied": "Nukopijuota!", "footer-copy": "© 2026 HOMEFLIX PROJEKTAS" },
+            mt: { "nav-how": "UŻU", "nav-features": "KARATTERISTIĊI", "nav-install": "INSTALLAZZJONI", "nav-donate": "AGĦTI", "hero-badge": "2026", "hero-t1": "IĊ-ĊINEMA TIEGĦEK,", "hero-t2": "IR-REGOLI TIEGĦEK", "install-title": "Installazzjoni", "install-precise": "Docker u RTX 3050. Uża 720p/1080p.", "status-dev": "2026!", "how-title": "Kif jaħdem", "copy": "Ikkopja", "copied": "Ikkupjat!", "footer-copy": "© 2026 PROĠETT HOMEFLIX" },
+            pt: { "nav-how": "USO", "nav-features": "RECURSOS", "nav-install": "INSTALAR", "nav-donate": "APOIAR", "hero-badge": "2026", "hero-t1": "O TEU CINEMA,", "hero-t2": "AS TUAS REGRAS", "install-title": "Instalação", "install-precise": "Docker e RTX 3050. Usa 720p/1080p.", "status-dev": "Início de 2026!", "how-title": "Como funciona", "copy": "Copiar", "copied": "Copiado!", "footer-copy": "© 2026 PROJETO HOMEFLIX" },
+            sk: { "nav-how": "POUŽITIE", "nav-features": "FUNKCIE", "nav-install": "INŠTALÁCIA", "nav-donate": "PODPORIŤ", "hero-badge": "2026", "hero-t1": "TVOJE KINO,", "hero-t2": "TVOJE PRAVIDLÁ", "install-title": "Inštalácia", "install-precise": "Docker a RTX 3050. Použi 720p/1080p.", "status-dev": "2026!", "how-title": "Ako to funguje", "copy": "Kopírovať", "copied": "Skopírované!", "footer-copy": "© 2026 PROJEKT HOMEFLIX" },
+            sl: { "nav-how": "UPORABA", "nav-features": "FUNKCIJE", "nav-install": "NAMESTITEV", "nav-donate": "PODPRI", "hero-badge": "2026", "hero-t1": "TVOJ KINO,", "hero-t2": "TVOJA PRAVILA", "install-title": "Namestitev", "install-precise": "Docker in RTX 3050. Uporabi 720p/1080p.", "status-dev": "2026!", "how-title": "Kako deluje", "copy": "Kopiraj", "copied": "Kopirano!", "footer-copy": "© 2026 PROJEKT HOMEFLIX" },
+            es: { "nav-how": "USO", "nav-features": "FUNCIONES", "nav-install": "INSTALACIÓN", "nav-donate": "DONAR", "hero-badge": "2026", "hero-t1": "TU PROPIO CINE,", "hero-t2": "TUS REGLAS", "install-title": "Instalación", "install-precise": "Docker y RTX 3050. Usa 720p/1080p.", "status-dev": "2026!", "how-title": "Cómo funciona", "copy": "Copiar", "copied": "¡Copiado!", "footer-copy": "© 2026 PROYECTO HOMEFLIX" },
+            sv: { "nav-how": "ANVÄNDNING", "nav-features": "FUNKTIONER", "nav-install": "INSTALLERA", "nav-donate": "DONERA", "hero-badge": "2026", "hero-t1": "DIN BIO,", "hero-t2": "DINA REGLER", "install-title": "Installation", "install-precise": "Docker och RTX 3050. Använd 720p/1080p.", "status-dev": "2026!", "how-title": "Hur det funkar", "copy": "Kopiera", "copied": "Kopierat!", "footer-copy": "© 2026 HOMEFLIX PROJEKT" }
+        };
+
+        const euLangs = ["hu", "en", "de", "fr", "pl", "ro", "bg", "hr", "cs", "da", "nl", "et", "fi", "el", "ga", "it", "lv", "lt", "mt", "sk", "sl", "es", "sv", "pt"];
+        let currentLang = 'hu';
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden'));
+            document.getElementById('view-' + viewId).classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function toggleModal(id) { document.getElementById(id).classList.toggle('active'); }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.getElementById('current-lang-label').innerText = lang.toUpperCase();
+            const langModal = document.getElementById('lang-modal');
+            if (langModal.classList.contains('active')) langModal.classList.remove('active');
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                // Ha van fordítás, frissítjük, különben fallback angolra
+                const text = (translations[lang] && translations[lang][key]) || (translations['en'] && translations['en'][key]);
+                if (text) {
+                    el.classList.add('lang-transition');
+                    setTimeout(() => {
+                        el.innerText = text;
+                        el.classList.remove('lang-transition');
+                    }, 200);
+                }
+            });
+            document.querySelectorAll('.lang-card').forEach(card => card.classList.toggle('active', card.innerText === lang.toUpperCase()));
+        }
+
+        function initLangGrid() {
+            const grid = document.getElementById('lang-grid');
+            euLangs.sort().forEach(key => {
+                const item = document.createElement('div');
+                item.className = `lang-card ${key === currentLang ? 'active' : ''}`;
+                item.innerHTML = `<span class="text-sm font-black text-white">${key.toUpperCase()}</span>`;
+                item.onclick = () => changeLanguage(key);
+                grid.appendChild(item);
+            });
+        }
+
+        function copyAddr(id) {
+            const el = document.getElementById(id);
+            el.select(); document.execCommand('copy');
+            const btn = el.nextElementSibling;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-green-500 text-white"></i>';
+            lucide.createIcons();
+            setTimeout(() => { btn.innerHTML = orig; lucide.createIcons(); }, 2000);
+        }
+
+        function copyCode() {
+            const code = document.getElementById('code-content').innerText;
+            const area = document.createElement('textarea');
+            area.value = code; document.body.appendChild(area);
+            area.select(); document.execCommand('copy');
+            document.body.removeChild(area);
+            const copyBtn = document.querySelector('[data-i18n="copy"]');
+            const orig = copyBtn.innerText;
+            copyBtn.innerText = (translations[currentLang] || translations['en']).copied;
+            setTimeout(() => copyBtn.innerText = orig, 2000);
+        }
+
+        window.onclick = (e) => { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active'); };
+
+        lucide.createIcons();
+        window.onload = () => { initLangGrid(); changeLanguage('hu'); document.getElementById('lang-modal').classList.remove('active'); };
+    </script>
+</body>
+</html>
