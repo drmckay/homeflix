@@ -1,0 +1,64 @@
+name: "Stargate Timeline"
+description: "The complete Stargate franchise in chronological order"
+tmdb_collection_id: 44215
+items:
+  - tmdb_id: 2164
+    media_type: "movie"
+    title: "Stargate"
+    timeline_order: 1
+    timeline_year: 1994
+    timeline_notes: "Discovery of the Stargate"
+    season_range: null
+  - tmdb_id: 4629
+    media_type: "tv"
+    title: "Stargate SG-1"
+    timeline_order: 2
+    timeline_year: 1997
+    timeline_notes: "Seasons 1-8"
+    season_range:
+      start: 1
+      end: 8
+  - tmdb_id: 2290
+    media_type: "tv"
+    title: "Stargate Atlantis"
+    timeline_order: 3
+    timeline_year: 2004
+    timeline_notes: "Seasons 1-5"
+    season_range: null
+  - tmdb_id: 4629
+    media_type: "tv"
+    title: "Stargate SG-1"
+    timeline_order: 4
+    timeline_year: 2005
+    timeline_notes: "Seasons 9-10"
+    season_range:
+      start: 9
+      end: 10
+  - tmdb_id: 13001
+    media_type: "movie"
+    title: "Stargate: The Ark of Truth"
+    timeline_order: 5
+    timeline_year: 2008
+    timeline_notes: "Follows SG-1"
+    season_range: null
+  - tmdb_id: 12914
+    media_type: "movie"
+    title: "Stargate: Continuum"
+    timeline_order: 6
+    timeline_year: 2008
+    timeline_notes: "Alternate timeline"
+    season_range: null
+  - tmdb_id: 5148
+    media_type: "tv"
+    title: "Stargate Universe"
+    timeline_order: 7
+    timeline_year: 2009
+    timeline_notes: "Seasons 1-2"
+    season_range: null
+  - tmdb_id: 72925
+    media_type: "tv"
+    title: "Stargate Origins"
+    timeline_order: 8
+    timeline_year: 2018
+    timeline_notes: "Prequel web series"
+    season_range: null

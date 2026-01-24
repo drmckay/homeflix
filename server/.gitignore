@@ -1,0 +1,36 @@
+# Build artifacts
+target/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Runtime data
+data/
+
+# Whisper models (downloaded during build)
+models/*.bin
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# SQLx offline mode cache
+.sqlx/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# AI assistant config
+CLAUDE.md
+AGENTS.md

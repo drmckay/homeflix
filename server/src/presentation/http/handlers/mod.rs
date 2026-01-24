@@ -1,0 +1,8 @@
+pub mod media_handlers;
+pub mod series_handlers;
+pub mod streaming_handlers;
+pub mod progress_handlers;
+pub mod collection_handlers;
+pub mod search_handlers;
+pub mod proxy_handlers;
+pub mod subtitle_generation_handlers;

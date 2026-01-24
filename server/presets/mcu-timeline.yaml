@@ -1,0 +1,165 @@
+name: "MCU Timeline"
+description: "The Marvel Cinematic Universe in in-universe chronological order"
+tmdb_collection_id: null
+items:
+  - tmdb_id: 211387
+    media_type: "movie"
+    title: "Captain America: The First Avenger"
+    timeline_order: 1
+    timeline_year: 1943
+    timeline_notes: "WWII Era"
+    season_range: null
+  - tmdb_id: 102382
+    media_type: "movie"
+    title: "Captain Marvel"
+    timeline_order: 2
+    timeline_year: 1995
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 1726
+    media_type: "movie"
+    title: "Iron Man"
+    timeline_order: 3
+    timeline_year: 2008
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 10138
+    media_type: "movie"
+    title: "Iron Man 2"
+    timeline_order: 4
+    timeline_year: 2010
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 10195
+    media_type: "movie"
+    title: "Thor"
+    timeline_order: 5
+    timeline_year: 2011
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 1771
+    media_type: "movie"
+    title: "The Incredible Hulk"
+    timeline_order: 6
+    timeline_year: 2008
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 24428
+    media_type: "movie"
+    title: "The Avengers"
+    timeline_order: 7
+    timeline_year: 2012
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 68721
+    media_type: "movie"
+    title: "Iron Man 3"
+    timeline_order: 8
+    timeline_year: 2012
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 76338
+    media_type: "movie"
+    title: "Thor: The Dark World"
+    timeline_order: 9
+    timeline_year: 2013
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 100402
+    media_type: "movie"
+    title: "Captain America: The Winter Soldier"
+    timeline_order: 10
+    timeline_year: 2014
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 118340
+    media_type: "movie"
+    title: "Guardians of the Galaxy"
+    timeline_order: 11
+    timeline_year: 2014
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 283366
+    media_type: "movie"
+    title: "Guardians of the Galaxy Vol. 2"
+    timeline_order: 12
+    timeline_year: 2014
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 99861
+    media_type: "movie"
+    title: "Avengers: Age of Ultron"
+    timeline_order: 13
+    timeline_year: 2015
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 102899
+    media_type: "movie"
+    title: "Ant-Man"
+    timeline_order: 14
+    timeline_year: 2015
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 271110
+    media_type: "movie"
+    title: "Captain America: Civil War"
+    timeline_order: 15
+    timeline_year: 2016
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 284052
+    media_type: "movie"
+    title: "Doctor Strange"
+    timeline_order: 16
+    timeline_year: 2016
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 315635
+    media_type: "movie"
+    title: "Spider-Man: Homecoming"
+    timeline_order: 17
+    timeline_year: 2016
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 284053
+    media_type: "movie"
+    title: "Thor: Ragnarok"
+    timeline_order: 18
+    timeline_year: 2017
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 284054
+    media_type: "movie"
+    title: "Black Panther"
+    timeline_order: 19
+    timeline_year: 2017
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 299536
+    media_type: "movie"
+    title: "Avengers: Infinity War"
+    timeline_order: 20
+    timeline_year: 2018
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 363088
+    media_type: "movie"
+    title: "Ant-Man and the Wasp"
+    timeline_order: 21
+    timeline_year: 2018
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 299534
+    media_type: "movie"
+    title: "Avengers: Endgame"
+    timeline_order: 22
+    timeline_year: 2023
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 429617
+    media_type: "movie"
+    title: "Spider-Man: Far From Home"
+    timeline_order: 23
+    timeline_year: 2024
+    timeline_notes: null
+    season_range: null

@@ -1,0 +1,148 @@
+name: "Star Trek Timeline"
+description: "The complete Star Trek franchise in chronological in-universe order"
+tmdb_collection_id: null
+items:
+  - tmdb_id: 314
+    media_type: "tv"
+    title: "Star Trek: Enterprise"
+    timeline_order: 1
+    timeline_year: 2151
+    timeline_notes: "2151-2155"
+    season_range: null
+  - tmdb_id: 67198
+    media_type: "tv"
+    title: "Star Trek: Discovery (S1-2)"
+    timeline_order: 2
+    timeline_year: 2256
+    timeline_notes: "2256-2258"
+    season_range:
+      start: 1
+      end: 2
+  - tmdb_id: 103516
+    media_type: "tv"
+    title: "Star Trek: Strange New Worlds"
+    timeline_order: 3
+    timeline_year: 2259
+    timeline_notes: "2259+"
+    season_range: null
+  - tmdb_id: 253
+    media_type: "tv"
+    title: "Star Trek: The Original Series"
+    timeline_order: 4
+    timeline_year: 2265
+    timeline_notes: "2265-2269"
+    season_range: null
+  - tmdb_id: 1992
+    media_type: "tv"
+    title: "Star Trek: The Animated Series"
+    timeline_order: 5
+    timeline_year: 2269
+    timeline_notes: "2269-2270"
+    season_range: null
+  - tmdb_id: 152
+    media_type: "movie"
+    title: "Star Trek: The Motion Picture"
+    timeline_order: 6
+    timeline_year: 2273
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 154
+    media_type: "movie"
+    title: "Star Trek II: The Wrath of Khan"
+    timeline_order: 7
+    timeline_year: 2285
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 157
+    media_type: "movie"
+    title: "Star Trek III: The Search for Spock"
+    timeline_order: 8
+    timeline_year: 2285
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 168
+    media_type: "movie"
+    title: "Star Trek IV: The Voyage Home"
+    timeline_order: 9
+    timeline_year: 2286
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 172
+    media_type: "movie"
+    title: "Star Trek V: The Final Frontier"
+    timeline_order: 10
+    timeline_year: 2287
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 174
+    media_type: "movie"
+    title: "Star Trek VI: The Undiscovered Country"
+    timeline_order: 11
+    timeline_year: 2293
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 655
+    media_type: "tv"
+    title: "Star Trek: The Next Generation"
+    timeline_order: 12
+    timeline_year: 2364
+    timeline_notes: "2364-2370"
+    season_range: null
+  - tmdb_id: 193
+    media_type: "movie"
+    title: "Star Trek Generations"
+    timeline_order: 13
+    timeline_year: 2371
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 580
+    media_type: "tv"
+    title: "Star Trek: Deep Space Nine"
+    timeline_order: 14
+    timeline_year: 2369
+    timeline_notes: "2369-2375"
+    season_range: null
+  - tmdb_id: 1855
+    media_type: "tv"
+    title: "Star Trek: Voyager"
+    timeline_order: 15
+    timeline_year: 2371
+    timeline_notes: "2371-2378"
+    season_range: null
+  - tmdb_id: 199
+    media_type: "movie"
+    title: "Star Trek: First Contact"
+    timeline_order: 16
+    timeline_year: 2373
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 200
+    media_type: "movie"
+    title: "Star Trek: Insurrection"
+    timeline_order: 17
+    timeline_year: 2375
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 201
+    media_type: "movie"
+    title: "Star Trek: Nemesis"
+    timeline_order: 18
+    timeline_year: 2379
+    timeline_notes: null
+    season_range: null
+  - tmdb_id: 85949
+    media_type: "tv"
+    title: "Star Trek: Picard"
+    timeline_order: 19
+    timeline_year: 2399
+    timeline_notes: "2399-2401"
+    season_range: null
+  - tmdb_id: 67198
+    media_type: "tv"
+    title: "Star Trek: Discovery (S3+)"
+    timeline_order: 20
+    timeline_year: 3188
+    timeline_notes: "32nd Century"
+    season_range:
+      start: 3
+      end: 5

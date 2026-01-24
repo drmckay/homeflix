@@ -1,0 +1,25 @@
+[package]
+name = "media-identifier"
+version = "0.1.0"
+edition = "2021"
+description = "A guessit-inspired media filename parser for Rust"
+license = "MIT"
+
+[dependencies]
+nom = "7.1"
+regex = "1.10"
+lazy_static = "1.4"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+
+[[bin]]
+name = "media-identifier"
+path = "src/main.rs"
+
+[lib]
+name = "media_identifier"
+path = "src/lib.rs"
