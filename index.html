@@ -311,19 +311,19 @@
                         <div class="p-8 overflow-x-auto">
                             <pre class="text-sm font-mono text-white/70 leading-loose" id="code-content"><code><span class="text-blue-400">services:</span>
   <span class="text-red-400">homeflix-web:</span>
-    <span class="text-white/40">image:</span> ghcr.io/homeflix/web:latest
+    <span class="text-white/40">image:</span> ghcr.io/homeflix-web:latest
     <span class="text-white/40">ports:</span> ["5173:5173"]
 
   <span class="text-red-400">homeflix-server:</span>
-    <span class="text-white/40">image:</span> ghcr.io/homeflix/server:latest
+    <span class="text-white/40">image:</span> ghcr.io/homeflix-server:latest
     <span class="text-white/40">environment:</span>
       - TMDB_API_KEY=YOUR_FREE_KEY
     <span class="text-white/40">volumes:</span>
       - /path/to/movies:/data/movies
       - ./db:/app/database
 
-  <span class="text-red-400">subtitle-worker:</span>
-    <span class="text-white/40">image:</span> ghcr.io/homeflix/worker:latest
+  <!--<span class="text-red-400">subtitle-worker:</span>
+    <span class="text-white/40">image:</span> ghcr.io/homeflix/worker:latest-->
 
   <span class="text-red-400">ollama:</span>
     <span class="text-white/40">image:</span> ollama/ollama:latest</code></pre>
