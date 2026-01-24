@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="hu">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Homeflix - A Te Saját Mozid</title>
+    <title>Homeflix - Your Personal Cinema</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -311,19 +311,19 @@
                         <div class="p-8 overflow-x-auto">
                             <pre class="text-sm font-mono text-white/70 leading-loose" id="code-content"><code><span class="text-blue-400">services:</span>
   <span class="text-red-400">homeflix-web:</span>
-    <span class="text-white/40">image:</span> ghcr.io/homeflix-web:latest
+    <span class="text-white/40">image:</span> ghcr.io/drmckay/homeflix-web:latest
     <span class="text-white/40">ports:</span> ["5173:5173"]
 
   <span class="text-red-400">homeflix-server:</span>
-    <span class="text-white/40">image:</span> ghcr.io/homeflix-server:latest
+    <span class="text-white/40">image:</span> ghcr.io/drmckay/homeflix-server:latest
     <span class="text-white/40">environment:</span>
       - TMDB_API_KEY=YOUR_FREE_KEY
     <span class="text-white/40">volumes:</span>
       - /path/to/movies:/data/movies
       - ./db:/app/database
 
-  <!--<span class="text-red-400">subtitle-worker:</span>
-    <span class="text-white/40">image:</span> ghcr.io/homeflix/worker:latest-->
+  <span class="text-red-400">subtitle-worker:</span>
+    <span class="text-white/40">image:</span> ghcr.io/drmckay/homeflix-worker:latest
 
   <span class="text-red-400">ollama:</span>
     <span class="text-white/40">image:</span> ollama/ollama:latest</code></pre>
@@ -672,7 +672,14 @@
         window.onclick = (e) => { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active'); };
 
         lucide.createIcons();
-        window.onload = () => { initLangGrid(); changeLanguage('hu'); document.getElementById('lang-modal').classList.remove('active'); };
+        window.onload = () => {
+            initLangGrid();
+            // Detect browser language - default to English, use Hungarian if browser is Hungarian
+            const browserLang = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+            const detectedLang = browserLang.startsWith('hu') ? 'hu' : 'en';
+            changeLanguage(detectedLang);
+            document.getElementById('lang-modal').classList.remove('active');
+        };
     </script>
 </body>
 </html>
