@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+	<title>Homeflix</title>
+	<!-- Extra bold H letter with Netflix red - stroke width 24px -->
+	<path d="M 20 12 L 20 116 L 44 116 L 44 76 L 84 76 L 84 116 L 108 116 L 108 12 L 84 12 L 84 52 L 44 52 L 44 12 Z" fill="#E50914"/>
+</svg>

@@ -1,0 +1,25 @@
+# Subprojects not ready for public
+subs/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# AI assistant config files
+CLAUDE.md
+AGENTS.md
+.claude/
+.cursor/
+.mcp.json
