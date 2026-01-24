@@ -40,7 +40,7 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Container metadata
-LABEL org.opencontainers.image.source=https://github.com/drmckay-dev/homeflix
+LABEL org.opencontainers.image.source=https://github.com/drmckay/homeflix
 LABEL org.opencontainers.image.description="HomeFlix Web Frontend"
 LABEL org.opencontainers.image.licenses="MIT"
 
