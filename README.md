@@ -29,13 +29,13 @@ A self-hosted media server with a Netflix-like interface for your personal media
 
 ```bash
 # Pull the web frontend image
-docker pull ghcr.io/drmckay/homeflix/web:latest
+docker pull ghcr.io/drmckay/homeflix-web:latest
 
 # Run the container
 docker run -d \
   -p 3000:3000 \
   -e VITE_API_URL=http://your-backend:3001 \
-  ghcr.io/drmckay/homeflix/web:latest
+  ghcr.io/drmckay/homeflix-web:latest
 ```
 
 ## Development
