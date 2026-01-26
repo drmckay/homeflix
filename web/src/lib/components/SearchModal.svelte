@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { apiUrl } from '$lib/stores/apiUrl';
 	import type { Media } from '$lib/types';
 
-	const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+	let API_BASE = $state($apiUrl);
+	
+	// Update API_BASE when store changes
+	$effect(() => {
+		API_BASE = $apiUrl;
+	});
 
 	interface Props {
 		isOpen: boolean;

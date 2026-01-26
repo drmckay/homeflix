@@ -10,8 +10,9 @@ RUN npm ci
 # Copy source files
 COPY . .
 
-# Build args for environment variables baked into the build
-ARG VITE_API_URL
+# Build args for environment variables (optional - can be set at runtime)
+# Note: VITE_API_URL is kept for backward compatibility, but PUBLIC_API_URL should be used at runtime
+ARG VITE_API_URL=http://localhost:3000
 ENV VITE_API_URL=${VITE_API_URL}
 
 # Build the application
@@ -36,6 +37,8 @@ USER sveltekit
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV NODE_ENV=production
+# Runtime API URL - can be overridden at container startup
+ENV PUBLIC_API_URL=http://localhost:3000
 
 EXPOSE 3000
 

@@ -1,11 +1,35 @@
 import type { GroupedLibrary, Series, SeriesDetails, CollectionSummary, CollectionDetails, Media, Credits } from './types';
+import { env } from '$env/dynamic/public';
+import { browser } from '$app/environment';
+import { get } from 'svelte/store';
+import { apiUrl } from './stores/apiUrl';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+/**
+ * Get API base URL from runtime configuration
+ * 
+ * - Server-side: Uses $env/dynamic/public which reads from runtime environment variables
+ * - Client-side: Uses the apiUrl store which fetches from /api/config endpoint
+ * 
+ * This allows the API URL to be configured at runtime via PUBLIC_API_URL environment variable
+ * instead of being baked into the build.
+ * 
+ * Note: This function is called on every API request to ensure we always use the latest value.
+ */
+function getApiBase(): string {
+	if (!browser) {
+		// Server-side: use runtime environment variable
+		return env.PUBLIC_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000';
+	}
+	
+	// Client-side: use store value (will be initialized from /api/config)
+	// Use get() to read current value synchronously
+	return get(apiUrl);
+}
 
 type FetchFn = typeof fetch;
 
 export async function fetchGroupedLibrary(customFetch: FetchFn = fetch): Promise<GroupedLibrary> {
-    const res = await customFetch(`${API_BASE}/v2/media`);
+    const res = await customFetch(`${getApiBase()}/v2/media`);
     if (!res.ok) {
         throw new Error('Failed to fetch library');
     }
@@ -13,7 +37,7 @@ export async function fetchGroupedLibrary(customFetch: FetchFn = fetch): Promise
 }
 
 export async function fetchAllSeries(customFetch: FetchFn = fetch): Promise<Series[]> {
-    const res = await customFetch(`${API_BASE}/v2/series`);
+    const res = await customFetch(`${getApiBase()}/v2/series`);
     if (!res.ok) {
         throw new Error('Failed to fetch series');
     }
@@ -21,7 +45,7 @@ export async function fetchAllSeries(customFetch: FetchFn = fetch): Promise<Seri
 }
 
 export async function fetchSeriesDetails(id: number, customFetch: FetchFn = fetch): Promise<SeriesDetails> {
-    const res = await customFetch(`${API_BASE}/v2/series/${id}`);
+    const res = await customFetch(`${getApiBase()}/v2/series/${id}`);
     if (!res.ok) {
         throw new Error('Failed to fetch series details');
     }
@@ -29,7 +53,7 @@ export async function fetchSeriesDetails(id: number, customFetch: FetchFn = fetc
 }
 
 export async function fetchCollections(customFetch: FetchFn = fetch): Promise<CollectionSummary[]> {
-    const res = await customFetch(`${API_BASE}/v2/collections`);
+    const res = await customFetch(`${getApiBase()}/v2/collections`);
     if (!res.ok) {
         throw new Error('Failed to fetch collections');
     }
@@ -44,7 +68,7 @@ export async function fetchCollections(customFetch: FetchFn = fetch): Promise<Co
 }
 
 export async function fetchCollectionDetails(id: number, customFetch: FetchFn = fetch): Promise<CollectionDetails> {
-    const res = await customFetch(`${API_BASE}/v2/collections/${id}`);
+    const res = await customFetch(`${getApiBase()}/v2/collections/${id}`);
     if (!res.ok) {
         throw new Error('Failed to fetch collection details');
     }
@@ -66,11 +90,12 @@ export async function fetchCollectionDetails(id: number, customFetch: FetchFn = 
 
 export function getImageUrl(path: string | null): string {
 	if (!path) return '';
+	const apiBase = getApiBase();
 	if (path.startsWith('https://image.tmdb.org/')) {
-		return `${API_BASE}/v2/images/proxy?url=${encodeURIComponent(path)}`;
+		return `${apiBase}/v2/images/proxy?url=${encodeURIComponent(path)}`;
 	}
 	if (path.startsWith('http')) return path;
-	return `${API_BASE}${path}`; // Handle relative paths served by backend
+	return `${apiBase}${path}`; // Handle relative paths served by backend
 }
 
 /**
@@ -78,7 +103,7 @@ export function getImageUrl(path: string | null): string {
  * Used as fallback when media doesn't have a poster image.
  */
 export function getThumbnailUrl(mediaId: number, width: number = 320): string {
-	return `${API_BASE}/v2/thumbnail/${mediaId}?width=${width}`;
+	return `${getApiBase()}/v2/thumbnail/${mediaId}?width=${width}`;
 }
 
 // Media details with audio tracks
@@ -138,7 +163,7 @@ export async function fetchMediaDetails(
 	id: number,
 	customFetch: FetchFn = fetch
 ): Promise<MediaDetails> {
-	const res = await customFetch(`${API_BASE}/v2/media/${id}`);
+	const res = await customFetch(`${getApiBase()}/v2/media/${id}`);
 	if (!res.ok) {
 		throw new Error('Failed to fetch media details');
 	}
@@ -147,7 +172,7 @@ export async function fetchMediaDetails(
 
 // Streaming API
 export function getStreamUrl(mediaId: number): string {
-	return `${API_BASE}/v2/stream/${mediaId}`;
+	return `${getApiBase()}/v2/stream/${mediaId}`;
 }
 
 /**
@@ -155,7 +180,7 @@ export function getStreamUrl(mediaId: number): string {
  * Returns WebVTT format subtitle content.
  */
 export function getSubtitleUrl(mediaId: number, index: number): string {
-	return `${API_BASE}/v2/subtitles/${mediaId}/${index}`;
+	return `${getApiBase()}/v2/subtitles/${mediaId}/${index}`;
 }
 
 /**
@@ -165,7 +190,7 @@ export async function fetchMediaTracks(
 	mediaId: number,
 	customFetch: FetchFn = fetch
 ): Promise<MediaTracksResponse> {
-	const res = await customFetch(`${API_BASE}/v2/media/${mediaId}/tracks`);
+	const res = await customFetch(`${getApiBase()}/v2/media/${mediaId}/tracks`);
 	if (!res.ok) {
 		throw new Error('Failed to fetch media tracks');
 	}
@@ -178,7 +203,7 @@ export async function saveProgress(
 	position: number,
 	isWatched: boolean
 ): Promise<void> {
-	await fetch(`${API_BASE}/v2/progress/${mediaId}`, {
+	await fetch(`${getApiBase()}/v2/progress/${mediaId}`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
@@ -193,7 +218,7 @@ export async function fetchSimilarMedia(
 	mediaId: number,
 	customFetch: FetchFn = fetch
 ): Promise<Media[]> {
-	const res = await customFetch(`${API_BASE}/v2/media/${mediaId}/similar`);
+	const res = await customFetch(`${getApiBase()}/v2/media/${mediaId}/similar`);
 	if (!res.ok) {
 		return []; // Return empty array on error
 	}
@@ -205,7 +230,7 @@ export async function fetchMediaCredits(
 	mediaId: number,
 	customFetch: FetchFn = fetch
 ): Promise<Credits> {
-	const res = await customFetch(`${API_BASE}/v2/media/${mediaId}/credits`);
+	const res = await customFetch(`${getApiBase()}/v2/media/${mediaId}/credits`);
 	if (!res.ok) {
 		return { cast: [], crew: [] }; // Return empty on error
 	}
@@ -280,7 +305,7 @@ export interface BatchGenerateRequest {
 export async function fetchSubtitleCapabilities(
 	customFetch: FetchFn = fetch
 ): Promise<ServiceCapabilities> {
-	const res = await customFetch(`${API_BASE}/v2/subtitles/capabilities`);
+	const res = await customFetch(`${getApiBase()}/v2/subtitles/capabilities`);
 	if (!res.ok) {
 		throw new Error('Failed to fetch subtitle capabilities');
 	}
@@ -293,7 +318,7 @@ export async function generateSubtitle(
 	request: GenerateSubtitleRequest,
 	customFetch: FetchFn = fetch
 ): Promise<{ job_id: string; status: string }> {
-	const res = await customFetch(`${API_BASE}/v2/subtitles/${mediaId}/generate`, {
+	const res = await customFetch(`${getApiBase()}/v2/subtitles/${mediaId}/generate`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(request)
@@ -322,7 +347,7 @@ export async function cancelJob(
 	jobId: string,
 	customFetch: FetchFn = fetch
 ): Promise<void> {
-	const res = await customFetch(`${API_BASE}/v2/subtitles/jobs/${jobId}`, {
+	const res = await customFetch(`${getApiBase()}/v2/subtitles/jobs/${jobId}`, {
 		method: 'DELETE'
 	});
 	if (!res.ok) {
@@ -336,7 +361,7 @@ export async function batchGenerateSubtitles(
 	request: BatchGenerateRequest,
 	customFetch: FetchFn = fetch
 ): Promise<{ job_id: string; status: string }> {
-	const res = await customFetch(`${API_BASE}/v2/subtitles/batch/generate`, {
+	const res = await customFetch(`${getApiBase()}/v2/subtitles/batch/generate`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(request)
@@ -353,7 +378,7 @@ export async function fetchBatchJobStatus(
 	jobId: string,
 	customFetch: FetchFn = fetch
 ): Promise<BatchJobStatus> {
-	const res = await customFetch(`${API_BASE}/v2/subtitles/batch/jobs/${jobId}`);
+	const res = await customFetch(`${getApiBase()}/v2/subtitles/batch/jobs/${jobId}`);
 	if (!res.ok) {
 		throw new Error('Failed to fetch batch job status');
 	}
@@ -365,7 +390,7 @@ export async function cancelBatchJob(
 	jobId: string,
 	customFetch: FetchFn = fetch
 ): Promise<void> {
-	const res = await customFetch(`${API_BASE}/v2/subtitles/batch/jobs/${jobId}`, {
+	const res = await customFetch(`${getApiBase()}/v2/subtitles/batch/jobs/${jobId}`, {
 		method: 'DELETE'
 	});
 	if (!res.ok) {

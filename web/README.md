@@ -67,13 +67,15 @@ npm run test:e2e   # Run e2e tests
 ### Build
 
 ```bash
+# Build-time API URL is optional (can be overridden at runtime)
 docker build -t homeflix-web --build-arg VITE_API_URL=http://api:3000 .
 ```
 
 ### Run
 
 ```bash
-docker run -d -p 3000:3000 homeflix-web
+# Runtime API URL can be set via environment variable
+docker run -d -p 3000:3000 -e PUBLIC_API_URL=http://api:3000 homeflix-web
 ```
 
 ### Environment Variables (Runtime)
@@ -82,7 +84,10 @@ docker run -d -p 3000:3000 homeflix-web
 |----------|-------------|---------|
 | `HOST` | Server bind address | `0.0.0.0` |
 | `PORT` | Server port | `3000` |
+| `PUBLIC_API_URL` | Backend API URL (runtime configurable) | `http://localhost:3000` |
 | `ORIGIN` | Allowed origin for CORS | - |
+
+**Note:** The `PUBLIC_API_URL` environment variable can be set at runtime (e.g., in Docker) and will override any build-time `VITE_API_URL` value. This allows the same Docker image to be used with different backend URLs without rebuilding.
 
 ## Project Structure
 

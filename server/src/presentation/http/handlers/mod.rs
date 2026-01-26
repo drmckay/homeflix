@@ -6,3 +6,4 @@ pub mod collection_handlers;
 pub mod search_handlers;
 pub mod proxy_handlers;
 pub mod subtitle_generation_handlers;
+pub mod health_handlers;

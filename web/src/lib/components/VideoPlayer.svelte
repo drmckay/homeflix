@@ -46,8 +46,14 @@
 		onEpisodeChange
 	}: Props = $props();
 
-	// API base URL
-	const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+	// API base URL - use runtime store
+	import { apiUrl } from '$lib/stores/apiUrl';
+	let API_BASE = $state($apiUrl);
+	
+	// Update API_BASE when store changes
+	$effect(() => {
+		API_BASE = $apiUrl;
+	});
 
 	// State
 	let videoElement: HTMLVideoElement | null = $state(null);

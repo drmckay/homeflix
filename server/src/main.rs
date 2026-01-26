@@ -54,7 +54,7 @@ use crate::interfaces::messaging::EventBus;
 use crate::presentation::http::handlers::{
     media_handlers, series_handlers, streaming_handlers,
     collection_handlers, progress_handlers, search_handlers, proxy_handlers,
-    subtitle_generation_handlers,
+    subtitle_generation_handlers, health_handlers,
 };
 use crate::presentation::http::middleware::{auth, cors, logging};
 
@@ -725,6 +725,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Routes
     let app = Router::new()
+        // Health Check (must be before middleware to avoid auth requirement)
+        .route("/health", get(health_handlers::health_check))
+        
         // V2 Routes - Media
         .route("/v2/media", get(media_handlers::list_grouped_library))
         .route("/v2/media/recent", get(media_handlers::list_recently_added))
