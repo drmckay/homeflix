@@ -28,10 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
+      contents: read
     outputs:
       web: ${{ steps.filter.outputs.web }}
       server: ${{ steps.filter.outputs.server }}
     steps:
+      - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v3
         id: filter
         with:
