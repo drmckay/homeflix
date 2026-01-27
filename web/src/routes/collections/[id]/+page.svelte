@@ -8,7 +8,15 @@
 	let { data }: { data: PageData } = $props();
 
 	// Sort mode: timeline or release
-	let sortMode = $state<'timeline' | 'release'>(data.collection.sort_mode === 'release' ? 'release' : 'timeline');
+	// Initialize with data from loader, but allow user overrides
+	let sortMode = $state<'timeline' | 'release'>('timeline');
+	
+	// Update sort mode when collection data changes
+	$effect(() => {
+		if (data.collection) {
+			sortMode = data.collection.sort_mode === 'release' ? 'release' : 'timeline';
+		}
+	});
 
 	// Filter: all, available, missing
 	let filterMode = $state<'all' | 'available' | 'missing'>('all');

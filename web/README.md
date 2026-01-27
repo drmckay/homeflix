@@ -47,7 +47,10 @@ Create a `.env` file or set these variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | `http://localhost:3000` |
+| `VITE_API_URL` | Backend API URL (build-time fallback) | `http://localhost:3000` |
+| `PUBLIC_API_URL` | Backend API URL (runtime - **RECOMMENDED**) | `http://localhost:3000` |
+
+**Note:** `PUBLIC_API_URL` is the recommended way to configure the API URL at runtime, especially for Docker deployments. It takes precedence over `VITE_API_URL`.
 
 ### Scripts
 

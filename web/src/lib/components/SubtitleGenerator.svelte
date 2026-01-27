@@ -207,33 +207,37 @@
         <form onsubmit={(e) => { e.preventDefault(); startGeneration(); }}>
             <!-- Audio Track Selection -->
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Audio Track</label>
-                <select
-                    bind:value={selectedAudioTrack}
-                    class="w-full bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
-                >
-                    {#each audioTracks as track, i}
-                        <option value={i}>
-                            {track.language ?? 'Unknown'}
-                            {track.codec ? `(${track.codec})` : ''}
-                            {track.channels ? `${track.channels}ch` : ''}
-                            {track.is_default ? '(default)' : ''}
-                        </option>
-                    {/each}
-                </select>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Audio Track
+                    <select
+                        bind:value={selectedAudioTrack}
+                        class="w-full mt-1 bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
+                    >
+                        {#each audioTracks as track, i}
+                            <option value={i}>
+                                {track.language ?? 'Unknown'}
+                                {track.codec ? `(${track.codec})` : ''}
+                                {track.channels ? `${track.channels}ch` : ''}
+                                {track.is_default ? '(default)' : ''}
+                            </option>
+                        {/each}
+                    </select>
+                </label>
             </div>
 
             <!-- Source Language -->
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Source Language</label>
-                <select
-                    bind:value={sourceLanguage}
-                    class="w-full bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
-                >
-                    {#each languages as lang}
-                        <option value={lang.code}>{lang.name}</option>
-                    {/each}
-                </select>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Source Language
+                    <select
+                        bind:value={sourceLanguage}
+                        class="w-full mt-1 bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
+                    >
+                        {#each languages as lang}
+                            <option value={lang.code}>{lang.name}</option>
+                        {/each}
+                    </select>
+                </label>
             </div>
 
             <!-- Target Language (Translation) -->
@@ -243,16 +247,16 @@
                     {#if !capabilities?.ollama_available}
                         <span class="text-yellow-500 text-xs">(Ollama unavailable)</span>
                     {/if}
+                    <select
+                        bind:value={targetLanguage}
+                        disabled={!capabilities?.ollama_available}
+                        class="w-full mt-1 bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {#each targetLanguages as lang}
+                            <option value={lang.code}>{lang.name}</option>
+                        {/each}
+                    </select>
                 </label>
-                <select
-                    bind:value={targetLanguage}
-                    disabled={!capabilities?.ollama_available}
-                    class="w-full bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {#each targetLanguages as lang}
-                        <option value={lang.code}>{lang.name}</option>
-                    {/each}
-                </select>
             </div>
 
             {#if error}

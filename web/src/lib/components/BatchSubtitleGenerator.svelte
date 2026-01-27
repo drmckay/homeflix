@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy } from 'svelte';
+    import { onDestroy, untrack } from 'svelte';
     import type { ServiceCapabilities, BatchJobStatus } from '$lib/api';
     import {
         fetchSubtitleCapabilities,
@@ -30,7 +30,7 @@
 
     // Form state
     let targetType = $state<'series' | 'season'>('series');
-    let selectedSeason = $state(seasons[0]?.number ?? 1);
+    let selectedSeason = $state(untrack(() => seasons[0]?.number ?? 1));
     let preferredAudioLanguage = $state<string>(''); // Empty = auto/first track
     let sourceLanguage = $state<string>('auto');
     let targetLanguage = $state<string>('');
@@ -258,17 +258,19 @@
             <!-- Season Selection (if season mode) -->
             {#if targetType === 'season'}
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Season</label>
-                    <select
-                        bind:value={selectedSeason}
-                        class="w-full bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
-                    >
-                        {#each seasons as season}
-                            <option value={season.number}>
-                                Season {season.number} ({season.episodeCount} episodes)
-                            </option>
-                        {/each}
-                    </select>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                        Season
+                        <select
+                            bind:value={selectedSeason}
+                            class="w-full mt-1 bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
+                        >
+                            {#each seasons as season}
+                                <option value={season.number}>
+                                    Season {season.number} ({season.episodeCount} episodes)
+                                </option>
+                            {/each}
+                        </select>
+                    </label>
                 </div>
             {/if}
 
@@ -277,15 +279,15 @@
                 <label class="block text-sm font-medium text-gray-300 mb-2">
                     Audio Track Language
                     <span class="text-gray-500 text-xs ml-1">(auto-matched for each episode)</span>
+                    <select
+                        bind:value={preferredAudioLanguage}
+                        class="w-full mt-1 bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
+                    >
+                        {#each audioLanguages as lang}
+                            <option value={lang.code}>{lang.name}</option>
+                        {/each}
+                    </select>
                 </label>
-                <select
-                    bind:value={preferredAudioLanguage}
-                    class="w-full bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
-                >
-                    {#each audioLanguages as lang}
-                        <option value={lang.code}>{lang.name}</option>
-                    {/each}
-                </select>
                 <p class="text-gray-500 text-xs mt-1">
                     The system will automatically find the matching audio track for each episode.
                 </p>
@@ -293,15 +295,17 @@
 
             <!-- Source Language -->
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Source Language</label>
-                <select
-                    bind:value={sourceLanguage}
-                    class="w-full bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
-                >
-                    {#each languages as lang}
-                        <option value={lang.code}>{lang.name}</option>
-                    {/each}
-                </select>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Source Language
+                    <select
+                        bind:value={sourceLanguage}
+                        class="w-full mt-1 bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none"
+                    >
+                        {#each languages as lang}
+                            <option value={lang.code}>{lang.name}</option>
+                        {/each}
+                    </select>
+                </label>
             </div>
 
             <!-- Target Language (Translation) -->
@@ -311,16 +315,16 @@
                     {#if !capabilities?.ollama_available}
                         <span class="text-yellow-500 text-xs">(Ollama unavailable)</span>
                     {/if}
+                    <select
+                        bind:value={targetLanguage}
+                        disabled={!capabilities?.ollama_available}
+                        class="w-full mt-1 bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {#each targetLanguages as lang}
+                            <option value={lang.code}>{lang.name}</option>
+                        {/each}
+                    </select>
                 </label>
-                <select
-                    bind:value={targetLanguage}
-                    disabled={!capabilities?.ollama_available}
-                    class="w-full bg-zinc-800 text-white rounded-md px-3 py-2 border border-zinc-700 focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {#each targetLanguages as lang}
-                        <option value={lang.code}>{lang.name}</option>
-                    {/each}
-                </select>
             </div>
 
             {#if error}

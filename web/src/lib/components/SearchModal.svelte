@@ -1,15 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { apiUrl } from '$lib/stores/apiUrl';
 	import type { Media } from '$lib/types';
-
-	let API_BASE = $state($apiUrl);
-	
-	// Update API_BASE when store changes
-	$effect(() => {
-		API_BASE = $apiUrl;
-	});
+	import { getApiBase } from '$lib/api';
 
 	interface Props {
 		isOpen: boolean;
@@ -54,7 +46,7 @@
 
 		isLoading = true;
 		try {
-			const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+			const response = await fetch(`${getApiBase()}/search?q=${encodeURIComponent(query)}`);
 			if (response.ok) {
 				const results = await response.json();
 				searchResults = results;
@@ -121,6 +113,7 @@
 		role="dialog"
 		aria-modal="true"
 		aria-label="Search"
+		tabindex="-1"
 	>
 		<div class="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
 			<div class="bg-[#141414] rounded-lg shadow-2xl overflow-hidden">

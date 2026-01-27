@@ -1,29 +1,25 @@
-import type { GroupedLibrary, Series, SeriesDetails, CollectionSummary, CollectionDetails, Media, Credits } from './types';
+import type { GroupedLibrary, Series, SeriesDetails, CollectionSummary, CollectionDetails, CollectionItem, Media, Credits } from './types';
 import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
-import { get } from 'svelte/store';
-import { apiUrl } from './stores/apiUrl';
 
 /**
  * Get API base URL from runtime configuration
  * 
  * - Server-side: Uses $env/dynamic/public which reads from runtime environment variables
- * - Client-side: Uses the apiUrl store which fetches from /api/config endpoint
+ * - Client-side: Uses relative URLs (same domain) for simplicity
  * 
  * This allows the API URL to be configured at runtime via PUBLIC_API_URL environment variable
- * instead of being baked into the build.
- * 
- * Note: This function is called on every API request to ensure we always use the latest value.
+ * for server-side requests. Client-side requests use relative URLs since they're on the same domain.
  */
-function getApiBase(): string {
+export function getApiBase(): string {
 	if (!browser) {
-		// Server-side: use runtime environment variable
+		// Server-side: use runtime environment variable (full URL needed for server-to-server calls)
 		return env.PUBLIC_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000';
 	}
 	
-	// Client-side: use store value (will be initialized from /api/config)
-	// Use get() to read current value synchronously
-	return get(apiUrl);
+	// Client-side: use relative URLs (empty string) since frontend and backend are on same domain
+	// This works because the browser will use the current origin
+	return '';
 }
 
 type FetchFn = typeof fetch;
@@ -52,12 +48,25 @@ export async function fetchSeriesDetails(id: number, customFetch: FetchFn = fetc
     return res.json();
 }
 
+// Raw types from API (before enrichment)
+interface RawCollectionSummary extends Omit<CollectionSummary, 'completion_percentage'> {
+    // API response doesn't have completion_percentage
+}
+
+interface RawCollectionItem extends Omit<CollectionItem, 'release_order' | 'season_number' | 'episode_number'> {
+    // API response doesn't have these fields
+}
+
+interface RawCollectionDetails extends Omit<CollectionDetails, 'items' | 'completion_percentage'> {
+    items: RawCollectionItem[];
+}
+
 export async function fetchCollections(customFetch: FetchFn = fetch): Promise<CollectionSummary[]> {
     const res = await customFetch(`${getApiBase()}/v2/collections`);
     if (!res.ok) {
         throw new Error('Failed to fetch collections');
     }
-    const collections: CollectionSummary[] = await res.json();
+    const collections: RawCollectionSummary[] = await res.json();
     return collections.map((collection) => ({
         ...collection,
         completion_percentage:
@@ -72,7 +81,7 @@ export async function fetchCollectionDetails(id: number, customFetch: FetchFn = 
     if (!res.ok) {
         throw new Error('Failed to fetch collection details');
     }
-    const details: CollectionDetails = await res.json();
+    const details: RawCollectionDetails = await res.json();
     const completion_percentage =
         details.total_items > 0 ? (details.available_items / details.total_items) * 100 : 0;
 
@@ -81,9 +90,9 @@ export async function fetchCollectionDetails(id: number, customFetch: FetchFn = 
         completion_percentage,
         items: details.items.map((item) => ({
             ...item,
-            release_order: item.release_order ?? item.timeline_order,
-            season_number: item.season_number ?? null,
-            episode_number: item.episode_number ?? null
+            release_order: item.timeline_order, // Default to timeline order if release order is missing (it is missing in API)
+            season_number: null,
+            episode_number: null
         }))
     };
 }
@@ -335,7 +344,7 @@ export async function fetchJobStatus(
 	jobId: string,
 	customFetch: FetchFn = fetch
 ): Promise<JobStatus> {
-	const res = await customFetch(`${API_BASE}/v2/subtitles/jobs/${jobId}`);
+	const res = await customFetch(`${getApiBase()}/v2/subtitles/jobs/${jobId}`);
 	if (!res.ok) {
 		throw new Error('Failed to fetch job status');
 	}

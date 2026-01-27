@@ -11,10 +11,10 @@
 	 * - Automatic subtitle generation (Whisper + Ollama)
 	 */
 
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import { browser } from '$app/environment';
 	import SubtitleGenerator from './SubtitleGenerator.svelte';
-	import { fetchSubtitleCapabilities, fetchSeriesDetails, getImageUrl, type ServiceCapabilities } from '$lib/api';
+	import { fetchSubtitleCapabilities, fetchSeriesDetails, getImageUrl, getApiBase, type ServiceCapabilities } from '$lib/api';
 	import type { SeriesDetails, Media } from '$lib/types';
 
 	// Props using Svelte 5 runes
@@ -46,15 +46,6 @@
 		onEpisodeChange
 	}: Props = $props();
 
-	// API base URL - use runtime store
-	import { apiUrl } from '$lib/stores/apiUrl';
-	let API_BASE = $state($apiUrl);
-	
-	// Update API_BASE when store changes
-	$effect(() => {
-		API_BASE = $apiUrl;
-	});
-
 	// State
 	let videoElement: HTMLVideoElement | null = $state(null);
 	let containerElement: HTMLDivElement | null = $state(null);
@@ -73,7 +64,7 @@
 	// Initial info overlay state (shows for first 6 seconds)
 	let showInitialInfo = $state(true);
 	let initialInfoTimeout: ReturnType<typeof setTimeout> | null = null;
-	let lastStreamOffset = $state(initialPosition);
+	let lastStreamOffset = $state(untrack(() => initialPosition));
 	
 	// Reset showInitialInfo when starting a new stream
 	$effect(() => {
@@ -89,7 +80,7 @@
 	});
 
 	// Stream offset tracking - the position where the current stream started
-	let streamStartOffset = $state(initialPosition);
+	let streamStartOffset = $state(untrack(() => initialPosition));
 	let isSeeking = $state(false);
 	let lastSavedTime = $state(0); // Track last saved time to avoid saving too frequently
 
@@ -194,7 +185,7 @@
 		streamStartOffset = safePosition;
 
 		const audio = audioTrack ?? selectedAudioTrack;
-		const url = `${API_BASE}/v2/stream/web/${mediaId}?start=${safePosition}&audio=${audio}`;
+		const url = `${getApiBase()}/v2/stream/web/${mediaId}?start=${safePosition}&audio=${audio}`;
 
 		// Stop any current playback and clear source first
 		videoElement.pause();
@@ -366,7 +357,7 @@
 
 		try {
 			// Fetch media tracks info (duration, position, audio tracks)
-			const tracksResponse = await fetch(`${API_BASE}/v2/media/${mediaId}/tracks`);
+			const tracksResponse = await fetch(`${getApiBase()}/v2/media/${mediaId}/tracks`);
 			if (tracksResponse.ok) {
 				const tracksData = await tracksResponse.json();
 				duration = tracksData.duration;
@@ -394,7 +385,7 @@
 				await startStreamFrom(startPos, selectedAudioTrack);
 			} else {
 				// Fallback to basic media info
-				const mediaResponse = await fetch(`${API_BASE}/v2/media/${mediaId}`);
+				const mediaResponse = await fetch(`${getApiBase()}/v2/media/${mediaId}`);
 				if (mediaResponse.ok) {
 					const mediaData = await mediaResponse.json();
 					if (mediaData.duration) {
@@ -490,7 +481,7 @@
 
 		// Use sendBeacon with Blob to set Content-Type header
 		const blob = new Blob([data], { type: 'application/json' });
-		const success = navigator.sendBeacon(`${API_BASE}/v2/progress/${mediaId}`, blob);
+		const success = navigator.sendBeacon(`${getApiBase()}/v2/progress/${mediaId}`, blob);
 		
 		if (success) {
 			lastSavedTime = currentTime;
@@ -605,7 +596,7 @@
 			const track = document.createElement('track');
 			track.kind = 'subtitles';
 			// Add cache-busting timestamp to force reload
-			track.src = `${API_BASE}/v2/subtitles/${mediaId}/${index}?offset=${streamStartOffset}&_t=${Date.now()}`;
+			track.src = `${getApiBase()}/v2/subtitles/${mediaId}/${index}?offset=${streamStartOffset}&_t=${Date.now()}`;
 			track.default = true;
 
 			// Set label from track info
@@ -716,7 +707,7 @@
 		showSubtitleGenerator = false;
 		// Reload tracks to get the new subtitle
 		try {
-			const tracksResponse = await fetch(`${API_BASE}/v2/media/${mediaId}/tracks`);
+			const tracksResponse = await fetch(`${getApiBase()}/v2/media/${mediaId}/tracks`);
 			if (tracksResponse.ok) {
 				const tracksData = await tracksResponse.json();
 				subtitleTracks = tracksData.subtitle_tracks || [];
@@ -884,6 +875,8 @@
 	});
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	bind:this={containerElement}
 	class="video-player"
@@ -1778,13 +1771,6 @@
 		height: 100%;
 	}
 
-	.control-button.text-button {
-		font-size: 14px;
-		font-weight: 500;
-		padding: 8px 12px;
-		width: auto;
-	}
-
 	/* Skip buttons with label */
 	.skip-button {
 		display: flex;
@@ -1795,12 +1781,6 @@
 	.skip-button svg {
 		width: 24px;
 		height: 24px;
-	}
-
-	.skip-label {
-		font-size: 9px;
-		font-weight: bold;
-		margin-top: -2px;
 	}
 
 	/* Volume control */

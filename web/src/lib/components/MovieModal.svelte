@@ -99,9 +99,13 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div 
     class="fixed inset-0 z-[500] bg-black/80 flex items-start justify-center overflow-y-auto py-8 backdrop-blur-sm"
     onclick={handleBackdropClick}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
 >
     <div class="relative bg-[#181818] rounded-lg w-full max-w-3xl mx-4 shadow-2xl overflow-hidden animate-modal-in">
         <!-- Close Button -->
