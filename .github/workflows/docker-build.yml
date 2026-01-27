@@ -23,8 +23,31 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      server: ${{ steps.filter.outputs.server }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'web/**'
+              - '.github/workflows/docker-build.yml'
+            server:
+              - 'server/**'
+              - 'media-identifier/**'
+              - '.github/workflows/docker-build.yml'
+
   build-web:
     name: Build Web Frontend
+    needs: changes
+    if: ${{ needs.changes.outputs.web == 'true' || github.ref_type == 'tag' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,6 +106,8 @@ jobs:
 
   build-server:
     name: Build Server Backend
+    needs: changes
+    if: ${{ needs.changes.outputs.server == 'true' || github.ref_type == 'tag' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
