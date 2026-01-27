@@ -10,6 +10,9 @@ RUN npm ci
 # Copy source files
 COPY . .
 
+# Generate SvelteKit config files
+RUN npx svelte-kit sync
+
 # Build args for environment variables (optional - can be set at runtime)
 # Note: VITE_API_URL is kept for backward compatibility, but PUBLIC_API_URL should be used at runtime
 ARG VITE_API_URL=http://localhost:3000
