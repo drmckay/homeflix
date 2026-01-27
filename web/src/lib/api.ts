@@ -12,11 +12,16 @@ import { browser } from '$app/environment';
  * for server-side requests. Client-side requests use relative URLs since they're on the same domain.
  */
 export function getApiBase(): string {
-	if (!browser) {
-		// Server-side: use runtime environment variable (full URL needed for server-to-server calls)
-		return env.PUBLIC_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000';
+	// If a specific API URL is configured, use it (works for both server and client)
+	if (env.PUBLIC_API_URL) {
+		return env.PUBLIC_API_URL;
 	}
-	
+
+	if (!browser) {
+		// Server-side: fallback to build-time or default
+		return import.meta.env.VITE_API_URL || 'http://localhost:3000';
+	}
+
 	// Client-side: use relative URLs (empty string) since frontend and backend are on same domain
 	// This works because the browser will use the current origin
 	return '';
