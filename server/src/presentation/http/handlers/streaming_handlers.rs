@@ -344,28 +344,28 @@ pub async fn stream_web(
     }
 
     // Add output args with proper A/V sync
-    // When both streams are copied, use -copyts to preserve original timestamps
-    // When transcoding, regenerate timestamps for proper sync
-    if !needs_video_transcode && !needs_audio_transcode {
-        // Both streams copied - preserve timestamps
+    if needs_video_transcode {
+        // Transcoding video: We can regenerate timestamps and enforce CFR
+        cmd.args([
+            "-vsync", "cfr",                       // Constant frame rate - regenerates timestamps for A/V sync
+            "-async_depth", "1",                   // Audio sync depth
+            "-fflags", "+genpts",                  // Generate presentation timestamps
+            "-avoid_negative_ts", "make_zero",      // Normalize negative timestamps
+            "-start_at_zero",                     // Start output timestamps at 0
+            "-movflags", "frag_keyframe+empty_moov+default_base_moof", // Fragmented MP4
+            "-f", "mp4",                          // Output format
+            "-",                                  // Output to stdout
+        ]);
+    } else {
+        // Copying video: Preserves original frame timing. 
+        // Cannot use -vsync/fps_mode with stream copy.
+        // We use -copyts to maintain synchronization between copied video and (potentially) transcoded audio.
         cmd.args([
             "-copyts",                              // Copy timestamps from input
             "-avoid_negative_ts", "make_zero",      // Normalize negative timestamps
             "-movflags", "frag_keyframe+empty_moov+default_base_moof", // Fragmented MP4
             "-f", "mp4",                           // Output format
             "-",                                   // Output to stdout
-        ]);
-    } else {
-        // At least one stream is transcoded - regenerate timestamps for sync
-        cmd.args([
-            "-vsync", "cfr",                       // Constant frame rate - regenerates timestamps for A/V sync
-            "-async_depth", "1",                   // Audio sync depth - helps align audio with video at start
-            "-fflags", "+genpts",                  // Generate presentation timestamps for better sync
-            "-avoid_negative_ts", "make_zero",      // Normalize negative timestamps
-            "-start_at_zero",                     // Start output timestamps at 0
-            "-movflags", "frag_keyframe+empty_moov+default_base_moof", // Fragmented MP4
-            "-f", "mp4",                          // Output format
-            "-",                                  // Output to stdout
         ]);
     }
 
