@@ -121,6 +121,16 @@
 	let castController: any = $state(null);
 	let castContext: any = $state(null);
 	let showCastButton = $state(false);
+	
+	// UI state
+	let isDragging = $state(false);
+
+	// Credits detection state
+	let creditsCanvas: HTMLCanvasElement | null = null;
+	let creditsContext: CanvasRenderingContext2D | null = null;
+	let creditsDetected = $state(false);
+	let consecutiveCreditsFrames = $state(0);
+	let lastCheckTime = $state(0);
 
 	// Initialize Chromecast
 	function initializeCast() {
@@ -310,6 +320,34 @@
 	let showEpisodeSelector = $state(false);
 	let currentSeasonEpisodes = $state<Media[]>([]);
 	let selectedSeasonInModal = $state<number | null>(null);
+
+	// Next episode logic
+	let nextEpisode = $derived.by(() => {
+		if (!seriesDetails || seasonNumber === undefined || episodeNumber === undefined) return null;
+
+		// 1. Try to find next episode in current season
+		const currentSeason = seriesDetails.seasons.find(s => s.season_number === seasonNumber);
+		if (currentSeason) {
+			const nextEp = currentSeason.episodes.find(e => e.episode_number === episodeNumber! + 1);
+			if (nextEp) return nextEp;
+		}
+
+		// 2. If not found, try first episode of next season
+		// Sort seasons to be sure we get the immediate next one
+		const sortedSeasons = [...seriesDetails.seasons].sort((a, b) => a.season_number - b.season_number);
+		const nextSeason = sortedSeasons.find(s => s.season_number > seasonNumber!);
+		
+		if (nextSeason && nextSeason.episodes.length > 0) {
+			// Return the first episode of the next season
+			// Sort episodes just in case
+			const sortedEpisodes = [...nextSeason.episodes].sort((a, b) => (a.episode_number ?? 0) - (b.episode_number ?? 0));
+			return sortedEpisodes[0];
+		}
+
+		return null;
+	});
+
+	let showNextEpisodeButton = $state(false);
 
 	// Progress percentage for styling
 	let progressPercent = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
@@ -535,46 +573,28 @@
 		}
 	}
 
-	// Initialize player on mount
-	onMount(async () => {
-		if (!browser) return;
-
-		initializeCast();
-
-		// Start fetching series details immediately if we know it's a series
-		// This runs in parallel with video loading so the button appears by the time the video starts
-		if (seriesId) {
-			fetchSeriesDetails(seriesId).then(details => {
-				seriesDetails = details;
-				// Filter episodes for current season
-				if (seasonNumber !== undefined) {
-					const season = details.seasons.find(s => s.season_number === seasonNumber);
-					if (season) {
-						currentSeasonEpisodes = season.episodes;
-						selectedSeasonInModal = seasonNumber;
-					}
-				} else if (details.seasons.length > 0) {
-					// Fallback to first season if no season number provided
-					currentSeasonEpisodes = details.seasons[0].episodes;
-					selectedSeasonInModal = details.seasons[0].season_number;
-				}
-			}).catch(err => {
-				console.warn('Failed to fetch series details:', err);
-			});
-		}
-
+	// Load media details and start playback
+	async function loadMedia(id: number) {
 		if (!videoElement) return;
 
-		// Prevent body scroll when player is open
-		const scrollY = window.scrollY;
-		document.body.style.position = 'fixed';
-		document.body.style.top = `-${scrollY}px`;
-		document.body.style.width = '100%';
-		document.body.style.overflow = 'hidden';
+		isLoading = true;
+		error = null;
+		showNextEpisodeButton = false;
+		
+		// Reset player state
+		currentTime = 0;
+		duration = 0;
+		audioTracks = [];
+		subtitleTracks = [];
+		selectedAudioTrack = 0;
+		selectedSubtitleIndex = null;
+		creditsDetected = false;
+		consecutiveCreditsFrames = 0;
+		lastCheckTime = 0;
 
 		try {
 			// Fetch media tracks info (duration, position, audio tracks)
-			const tracksResponse = await fetch(`${getApiBase()}/v2/media/${mediaId}/tracks`);
+			const tracksResponse = await fetch(`${getApiBase()}/v2/media/${id}/tracks`);
 			if (tracksResponse.ok) {
 				const tracksData = await tracksResponse.json();
 				duration = tracksData.duration;
@@ -583,7 +603,10 @@
 
 				// Use initialPosition if explicitly provided (including 0 for "start from beginning")
 				// Only fall back to saved position if initialPosition was not set
-				const startPos = initialPosition !== undefined ? initialPosition : tracksData.current_position || 0;
+				// Note: When switching episodes, initialPosition prop might be stale if not updated by parent yet,
+				// but usually we want to start from 0 or saved position for the new episode.
+				// If we are just mounting, use prop. If switching, use saved position or 0.
+				const startPos = tracksData.current_position || 0;
 				streamStartOffset = startPos;
 
 				// Select Hungarian audio track by default if available
@@ -602,14 +625,14 @@
 				await startStreamFrom(startPos, selectedAudioTrack);
 			} else {
 				// Fallback to basic media info
-				const mediaResponse = await fetch(`${getApiBase()}/v2/media/${mediaId}`);
+				const mediaResponse = await fetch(`${getApiBase()}/v2/media/${id}`);
 				if (mediaResponse.ok) {
 					const mediaData = await mediaResponse.json();
 					if (mediaData.duration) {
 						duration = mediaData.duration;
 					}
 				}
-				await startStreamFrom(initialPosition);
+				await startStreamFrom(0);
 			}
 			// Fetch subtitle generation capabilities (non-blocking)
 			fetchSubtitleCapabilities().then(caps => {
@@ -621,6 +644,54 @@
 			console.error('Player initialization error:', e);
 			error = e instanceof Error ? e.message : 'Unknown error';
 			isLoading = false;
+		}
+	}
+
+	// Initialize player on mount
+	onMount(async () => {
+		if (!browser) return;
+
+		initializeCast();
+
+		if (!videoElement) return;
+
+		// Prevent body scroll when player is open
+		const scrollY = window.scrollY;
+		document.body.style.position = 'fixed';
+		document.body.style.top = `-${scrollY}px`;
+		document.body.style.width = '100%';
+		document.body.style.overflow = 'hidden';
+	});
+
+	// React to mediaId changes
+	$effect(() => {
+		if (videoElement && mediaId) {
+			// Use untrack to avoid re-running if internal state changes, 
+			// but we want to run when mediaId changes.
+			untrack(() => loadMedia(mediaId));
+		}
+	});
+
+	// React to seriesId changes
+	$effect(() => {
+		if (seriesId) {
+			fetchSeriesDetails(seriesId).then(details => {
+				seriesDetails = details;
+				// Filter episodes for current season
+				if (seasonNumber !== undefined) {
+					const season = details.seasons.find(s => s.season_number === seasonNumber);
+					if (season) {
+						currentSeasonEpisodes = season.episodes;
+						selectedSeasonInModal = seasonNumber;
+					}
+				} else if (details.seasons.length > 0) {
+					// Fallback to first season if no season number provided
+					currentSeasonEpisodes = details.seasons[0].episodes;
+					selectedSeasonInModal = details.seasons[0].season_number;
+				}
+			}).catch(err => {
+				console.warn('Failed to fetch series details:', err);
+			});
 		}
 	});
 
@@ -950,6 +1021,69 @@
 		}
 	}
 
+	// Credits detection logic
+	function checkCredits() {
+		if (!videoElement || !nextEpisode) return;
+
+		// Initialize canvas if needed
+		if (!creditsCanvas) {
+			creditsCanvas = document.createElement('canvas');
+			creditsCanvas.width = 50;
+			creditsCanvas.height = 50;
+			creditsContext = creditsCanvas.getContext('2d', { willReadFrequently: true });
+		}
+
+		if (!creditsContext) return;
+
+		try {
+			// Draw current frame to small canvas
+			creditsContext.drawImage(videoElement, 0, 0, 50, 50);
+			const frameData = creditsContext.getImageData(0, 0, 50, 50);
+			const data = frameData.data;
+			let darkPixels = 0;
+			let lightPixels = 0;
+			const totalPixels = data.length / 4;
+
+			for (let i = 0; i < data.length; i += 4) {
+				const r = data[i];
+				const g = data[i + 1];
+				const b = data[i + 2];
+				
+				// Check for dark pixel (black background)
+				// Relaxed to < 60 to handle compression artifacts and washed out blacks
+				if (r < 60 && g < 60 && b < 60) {
+					darkPixels++;
+				}
+				// Check for light pixel (text)
+				// Relaxed to > 100 because downsampling blends white text with black bg, making it grey
+				// Also changed to OR to catch colored logos/text easier
+				else if (r > 100 || g > 100 || b > 100) {
+					lightPixels++;
+				}
+			}
+
+			// Heuristic: Mostly dark (>90%) but with some light content (>0.05%)
+			const darkRatio = darkPixels / totalPixels;
+			const lightRatio = lightPixels / totalPixels;
+
+			// console.log(`Credits detection: Dark=${darkRatio.toFixed(3)}, Light=${lightRatio.toFixed(4)}`);
+
+			if (darkRatio > 0.95 && lightRatio > 0.00005) {
+				consecutiveCreditsFrames++;
+				if (consecutiveCreditsFrames >= 3) {
+					creditsDetected = true;
+				}
+			} else {
+				consecutiveCreditsFrames = 0;
+				// Don't reset detected state immediately to avoid flickering off
+				// creditsDetected = false; 
+			}
+		} catch (e) {
+			// Canvas might be tainted or other error
+			console.warn('Error checking credits:', e);
+		}
+	}
+
 	// Controls visibility
 	function showControlsTemporarily() {
 		showControls = true;
@@ -965,6 +1099,9 @@
 
 	// Event handlers
 	function handleTimeUpdate(e: Event) {
+		// Don't update time if user is dragging
+		if (isDragging) return;
+
 		const video = e.target as HTMLVideoElement;
 		// Add stream offset to get actual position in the full video
 		currentTime = streamStartOffset + video.currentTime;
@@ -972,6 +1109,31 @@
 		// Save progress every 30 seconds (check if at least 30 seconds have passed since last save)
 		if (currentTime > 0 && currentTime - lastSavedTime >= 30) {
 			saveProgress();
+		}
+
+		// Credits detection and Next Episode button logic
+		if (nextEpisode && duration > 0) {
+			const timeRemaining = duration - currentTime;
+			const now = Date.now();
+
+			// Run credits check if within last 5 minutes (300 seconds) and not checked recently (throttle 1s)
+			if (timeRemaining <= 300 && now - lastCheckTime >= 1000) {
+				lastCheckTime = now;
+				checkCredits();
+			} else if (timeRemaining > 300) {
+				// Reset detection if we seeked back or are too far from end
+				creditsDetected = false;
+				consecutiveCreditsFrames = 0;
+			}
+
+			// Show button if within 15s OR credits detected within last 5 minutes
+			if (timeRemaining <= 15 || (timeRemaining <= 300 && creditsDetected)) {
+				showNextEpisodeButton = true;
+			} else {
+				showNextEpisodeButton = false;
+			}
+		} else {
+			showNextEpisodeButton = false;
 		}
 	}
 
@@ -1114,6 +1276,7 @@
 		poster={posterUrl}
 		playsinline
 		crossorigin="anonymous"
+		autoplay
 		ontimeupdate={handleTimeUpdate}
 		onloadedmetadata={handleLoadedMetadata}
 		onplay={handlePlay}
@@ -1154,6 +1317,18 @@
 			</svg>
 			<p class="casting-text">Casting to TV</p>
 		</div>
+	{/if}
+
+	<!-- Next Episode Button -->
+	{#if showNextEpisodeButton && nextEpisode}
+		<button class="next-episode-button" onclick={() => switchEpisode(nextEpisode!)}>
+			<div class="next-episode-icon">
+				<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" role="img">
+					<path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"></path>
+				</svg>
+			</div>
+			<span class="next-episode-text">Next Episode</span>
+		</button>
 	{/if}
 
 	<!-- Initial Rating Overlay (Netflix-style, shows first 6 seconds) -->
@@ -1209,11 +1384,18 @@
 					max={duration || 100}
 					value={currentTime}
 					disabled={isSeeking}
-					oninput={(e) => seek(parseFloat((e.target as HTMLInputElement).value))}
+					oninput={(e) => {
+						isDragging = true;
+						currentTime = parseFloat((e.target as HTMLInputElement).value);
+					}}
+					onchange={(e) => {
+						isDragging = false;
+						seek(parseFloat((e.target as HTMLInputElement).value));
+					}}
 					aria-label="Video progress"
 					style="--progress: {progressPercent}%;"
 				/>
-				<span class="progress-time">{formatTime(duration)}</span>
+				<span class="progress-time">{formatTime(Math.max(0, duration - currentTime))}</span>
 			</div>
 
 			<div class="controls-row">
@@ -2541,5 +2723,47 @@
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+	}
+
+	.next-episode-button {
+		position: absolute;
+		bottom: 120px;
+		right: 24px;
+		background: white;
+		color: black;
+		padding: 8px 16px 8px 12px;
+		border: none;
+		border-radius: 4px;
+		font-weight: bold;
+		cursor: pointer;
+		z-index: 200;
+		display: flex;
+		align-items: center;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		transition: transform 0.2s;
+		animation: slide-up 0.3s ease-out;
+		gap: 12px;
+	}
+
+	.next-episode-button:hover {
+		transform: scale(1.05);
+		background: #e6e6e6;
+	}
+
+	.next-episode-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.next-episode-text {
+		font-size: 16px;
+		font-weight: bold;
+		white-space: nowrap;
+	}
+
+	@keyframes slide-up {
+		from { transform: translateY(20px); opacity: 0; }
+		to { transform: translateY(0); opacity: 1; }
 	}
 </style>
