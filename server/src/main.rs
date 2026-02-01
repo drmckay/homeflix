@@ -735,6 +735,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/v2/media/:id", get(media_handlers::get_media))
         .route("/v2/media/:id/tracks", get(media_handlers::get_media_tracks))
         .route("/v2/media/:id/credits", get(media_handlers::get_media_credits))
+        .route("/v2/media/:id/similar", get(media_handlers::get_media_similar))
         .route("/v2/media/:id/identify", post(media_handlers::manual_identify))
         .route("/v2/scan", post(media_handlers::scan_library))
 

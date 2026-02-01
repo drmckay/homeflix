@@ -19,7 +19,7 @@ use crate::presentation::http::dto::media_dto::{
     GroupedLibraryResponse, LibraryMediaResponse, MediaResponse, ScanRequest, ScanResponse,
     ManualIdentifyRequest, ManualIdentifyResponse,
 };
-use crate::interfaces::external_services::{TmdbService, TmdbCreditsFetcher, Credits, CastMember, CrewMember};
+use crate::interfaces::external_services::{TmdbService, TmdbCreditsFetcher, Credits, CastMember, CrewMember, SimilarResult};
 use crate::shared::error::ApplicationError;
 use crate::infrastructure::messaging::in_memory_event_bus::InMemoryEventBus;
 use crate::interfaces::external_services::VideoAnalyzer;
@@ -476,6 +476,33 @@ pub async fn get_media_credits(
     };
 
     Ok(Json(response))
+}
+
+/// Get similar content for a media item
+pub async fn get_media_similar(
+    State(media_repo): State<Arc<dyn MediaRepository>>,
+    State(tmdb_service): State<Arc<dyn TmdbService>>,
+    Path(id): Path<i64>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    // Get media to find TMDB ID
+    let media = media_repo
+        .find_by_id(id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Media {} not found", id)))?;
+
+    let tmdb_id = media.tmdb_id
+        .ok_or_else(|| (StatusCode::BAD_REQUEST, "Media has no TMDB ID".to_string()))?;
+
+    let media_type = if media.media_type.is_movie() { "movie" } else { "tv" };
+
+    match tmdb_service.fetch_similar(tmdb_id, media_type).await {
+        Ok(results) => Ok(Json(results)),
+        Err(e) => {
+            tracing::error!("Error getting similar content: {}", e);
+            Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to get similar content".to_string()))
+        }
+    }
 }
 
 /// Manually identify a media item with a specific TMDB ID

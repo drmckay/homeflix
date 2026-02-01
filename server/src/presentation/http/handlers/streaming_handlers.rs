@@ -326,10 +326,12 @@ pub async fn stream_web(
 
     let mut cmd = Command::new("ffmpeg");
 
-    // Seeking AFTER input for accurate frame-level sync (slower but precise)
-    // This ensures both video and audio start at exactly the same point
-    cmd.args(["-i", file_path])
-        .args(["-ss", &start_seconds.to_string()])  // Seek after input (accurate)
+    // Use INPUT seeking (before -i) for fast and reliable seeking
+    // This snaps to the nearest keyframe before the timestamp.
+    // For stream copy (-c:v copy), this is required to maintain A/V sync.
+    // For transcoding, this is much faster than output seeking.
+    cmd.args(["-ss", &start_seconds.to_string()])
+        .args(["-i", file_path])
         .args(["-map", "0:v:0"])                    // First video stream
         .args(["-map", &format!("0:a:{}", audio_track)]); // Selected audio track
 
@@ -358,10 +360,9 @@ pub async fn stream_web(
         ]);
     } else {
         // Copying video: Preserves original frame timing. 
-        // Cannot use -vsync/fps_mode with stream copy.
-        // We use -copyts to maintain synchronization between copied video and (potentially) transcoded audio.
+        // We use input seeking so timestamps are reset relative to the seek point.
+        // Removed -copyts to ensure output timestamps start near 0.
         cmd.args([
-            "-copyts",                              // Copy timestamps from input
             "-avoid_negative_ts", "make_zero",      // Normalize negative timestamps
             "-movflags", "frag_keyframe+empty_moov+default_base_moof", // Fragmented MP4
             "-f", "mp4",                           // Output format
@@ -389,6 +390,7 @@ pub async fn stream_web(
     let mut response = Response::new(body);
     response.headers_mut().insert(header::CONTENT_TYPE, "video/mp4".parse().unwrap());
     response.headers_mut().insert(header::CACHE_CONTROL, "no-cache".parse().unwrap());
+    response.headers_mut().insert(header::ACCEPT_RANGES, "bytes".parse().unwrap());
 
     Ok(response)
 }
@@ -545,6 +547,19 @@ pub async fn get_subtitle(
     response.headers_mut().insert(
         header::CONTENT_TYPE,
         "text/vtt; charset=utf-8".parse().unwrap()
+    );
+    // Add CORS headers for Chromecast
+    response.headers_mut().insert(
+        header::ACCESS_CONTROL_ALLOW_ORIGIN,
+        "*".parse().unwrap()
+    );
+    response.headers_mut().insert(
+        header::ACCESS_CONTROL_ALLOW_HEADERS,
+        "Content-Type, Range".parse().unwrap()
+    );
+    response.headers_mut().insert(
+        header::ACCESS_CONTROL_ALLOW_METHODS,
+        "GET, OPTIONS".parse().unwrap()
     );
 
     Ok(response)

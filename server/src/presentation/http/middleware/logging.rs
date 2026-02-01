@@ -8,7 +8,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use tracing::{info, info_span};
+use tracing::{info, info_span, Instrument};
 use std::time::Instant;
 
 /// Logging middleware
@@ -21,20 +21,23 @@ pub async fn logging_middleware(
     let start = Instant::now();
 
     let span = info_span!("request", %method, %uri);
-    let _enter = span.enter();
 
-    let response = next.run(req).await;
+    async move {
+        let response = next.run(req).await;
 
-    let duration = start.elapsed();
-    let status = response.status();
+        let duration = start.elapsed();
+        let status = response.status();
 
-    info!(
-        method = %method,
-        uri = %uri,
-        status = %status,
-        duration = ?duration,
-        "Request processed"
-    );
+        info!(
+            method = %method,
+            uri = %uri,
+            status = %status,
+            duration = ?duration,
+            "Request processed"
+        );
 
-    response
+        response
+    }
+    .instrument(span)
+    .await
 }

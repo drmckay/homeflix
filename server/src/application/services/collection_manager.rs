@@ -92,6 +92,20 @@ impl<E: EventBus + ?Sized> CollectionManager<E> {
             .find_by_type(crate::domain::value_objects::MediaType::Movie)
             .await?;
 
+        // Get all items belonging to PRESET collections to exclude them from auto-detection
+        let mut preset_tmdb_ids = std::collections::HashSet::new();
+        if let Ok(preset_cols) = self.collection_repository.find_preset().await {
+            for col in preset_cols {
+                if let Some(id) = col.id {
+                    if let Ok(items) = self.collection_repository.find_items(id).await {
+                         for item in items {
+                             preset_tmdb_ids.insert(item.tmdb_id);
+                         }
+                    }
+                }
+            }
+        }
+
         // Track collections and their movies
         // Key: TMDB collection ID, Value: (collection_info, list of movie IDs)
         let mut collection_map: HashMap<i64, (crate::interfaces::external_services::CollectionInfo, Vec<i64>)> = HashMap::new();
@@ -123,6 +137,12 @@ impl<E: EventBus + ?Sized> CollectionManager<E> {
 
             // Check if movie belongs to a collection
             if let Some(collection_info) = details.belongs_to_collection {
+                // Skip if movie is already in a preset collection
+                if preset_tmdb_ids.contains(&tmdb_id) {
+                     debug!("Skipping auto-collection for movie '{}' (TMDB {}) - already in preset", movie.title, tmdb_id);
+                     continue;
+                }
+
                 debug!(
                     "Movie '{}' belongs to collection '{}' (TMDB {})",
                     movie.title, collection_info.name, collection_info.id
@@ -146,6 +166,7 @@ impl<E: EventBus + ?Sized> CollectionManager<E> {
         let preset_keywords: Vec<&str> = vec![
             "stargate", "star trek", "marvel", "mcu", "avengers",
         ];
+
 
         // Build a lookup map of movies by TMDB ID for quick availability checks
         let movie_by_tmdb_id: HashMap<i64, &_> = movies
@@ -551,6 +572,51 @@ impl<E: EventBus + ?Sized> CollectionManager<E> {
                 continue;
             }
 
+            // Check if collection already exists (by TMDB ID first, then by name)
+            // We need this ID to protect the current preset from being deleted during conflict cleanup
+            let existing_collection = if let Some(tmdb_id) = preset.tmdb_collection_id {
+                // First check by TMDB ID
+                let by_tmdb = self.collection_repository.find_by_tmdb_id(tmdb_id).await?;
+                if by_tmdb.is_some() {
+                    by_tmdb
+                } else {
+                    // Also check by preset name (might have been created before TMDB integration)
+                    self.collection_repository.find_by_name(&preset.name).await?
+                }
+            } else {
+                self.collection_repository.find_by_name(&preset.name).await?
+            };
+
+            let protected_collection_id = existing_collection.as_ref().and_then(|c| c.id);
+
+            // Clean up conflicting collections
+            // If any movie in this preset is already in an existing collection (that isn't this preset),
+            // we remove the conflicting collection to ensure the preset takes precedence.
+            let mut conflicting_collections = std::collections::HashSet::new();
+            for item in &preset.items {
+                if let Ok(collections) = self.collection_repository.find_collections_by_item_tmdb_id(item.tmdb_id).await {
+                    for col in collections {
+                        // Conflict if this collection is NOT the one we are currently processing/updating
+                        if let Some(col_id) = col.id {
+                            if Some(col_id) != protected_collection_id {
+                                conflicting_collections.insert((col_id, col.name.clone()));
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (col_id, col_name) in conflicting_collections {
+                info!("Removing conflicting collection '{}' (ID: {}) for preset '{}'", col_name, col_id, preset.name);
+                // Delete items first just in case cascade isn't set up
+                if let Err(e) = self.collection_repository.delete_items(col_id).await {
+                     warn!("Failed to delete items for conflicting collection {}: {}", col_id, e);
+                }
+                if let Err(e) = self.collection_repository.delete(col_id).await {
+                     warn!("Failed to delete conflicting collection {}: {}", col_id, e);
+                }
+            }
+
             total_items += preset.items.len();
             available_items += collection_available_count;
 
@@ -581,20 +647,6 @@ impl<E: EventBus + ?Sized> CollectionManager<E> {
 
             // Use TMDB name if available, otherwise use preset name
             let collection_name = tmdb_name.as_deref().unwrap_or(&preset.name);
-
-            // Check if collection already exists (by TMDB ID first, then by name)
-            let existing_collection = if let Some(tmdb_id) = preset.tmdb_collection_id {
-                // First check by TMDB ID
-                let by_tmdb = self.collection_repository.find_by_tmdb_id(tmdb_id).await?;
-                if by_tmdb.is_some() {
-                    by_tmdb
-                } else {
-                    // Also check by preset name (might have been created before TMDB integration)
-                    self.collection_repository.find_by_name(&preset.name).await?
-                }
-            } else {
-                self.collection_repository.find_by_name(&preset.name).await?
-            };
 
             let collection_id = match existing_collection {
                 Some(mut existing) => {

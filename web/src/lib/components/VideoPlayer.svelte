@@ -114,6 +114,197 @@
 	let showSubtitleGenerator = $state(false);
 	let subtitleCapabilities = $state<ServiceCapabilities | null>(null);
 
+	// Chromecast state
+	let isCasting = $state(false);
+	let castSession: any = $state(null);
+	let castPlayer: any = $state(null);
+	let castController: any = $state(null);
+	let castContext: any = $state(null);
+	let showCastButton = $state(false);
+
+	// Initialize Chromecast
+	function initializeCast() {
+		if (!browser) return;
+		
+		if (!window.cast) {
+			// If API not loaded yet, retry in a bit
+			if (window.chrome && !window.cast) {
+				setTimeout(initializeCast, 500);
+			} else {
+				// Define callback for when script loads
+				window.__onGCastApiAvailable = (isAvailable: boolean) => {
+					if (isAvailable) {
+						initializeCast();
+					}
+				};
+			}
+			return;
+		}
+
+		try {
+			castContext = window.cast.framework.CastContext.getInstance();
+			
+			castContext.setOptions({
+				receiverApplicationId: window.chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+				autoJoinPolicy: window.chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+			});
+
+			// Listen for state changes
+			castContext.addEventListener(
+				window.cast.framework.CastContextEventType.CAST_STATE_CHANGED,
+				(event: any) => {
+					showCastButton = event.castState !== window.cast.framework.CastState.NO_DEVICES_AVAILABLE;
+				}
+			);
+
+			castContext.addEventListener(
+				window.cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+				handleCastSessionChange
+			);
+			
+			// Check initial state
+			const state = castContext.getCastState();
+			showCastButton = state !== window.cast.framework.CastState.NO_DEVICES_AVAILABLE;
+			
+			// If already connected (rejoined), setup session
+			if (castContext.getCurrentSession()) {
+				handleCastSessionChange({
+					sessionState: window.cast.framework.SessionState.SESSION_STARTED,
+					session: castContext.getCurrentSession()
+				});
+			}
+
+		} catch (e) {
+			console.error('Failed to initialize Cast SDK:', e);
+		}
+	}
+
+	function handleCastSessionChange(event: any) {
+		switch (event.sessionState) {
+			case window.cast.framework.SessionState.SESSION_STARTED:
+			case window.cast.framework.SessionState.SESSION_RESUMED:
+				castSession = event.session;
+				isCasting = true;
+				setupRemotePlayer();
+				// If we just started, load the media
+				if (event.sessionState === window.cast.framework.SessionState.SESSION_STARTED) {
+					loadMediaToCast();
+				}
+				break;
+			case window.cast.framework.SessionState.SESSION_ENDED:
+				isCasting = false;
+				castSession = null;
+				castPlayer = null;
+				castController = null;
+				// Sync back to local player
+				if (videoElement) {
+					videoElement.currentTime = currentTime;
+					videoElement.play();
+				}
+				break;
+		}
+	}
+
+	function setupRemotePlayer() {
+		if (!castSession) return;
+		
+		castPlayer = new window.cast.framework.RemotePlayer();
+		castController = new window.cast.framework.RemotePlayerController(castPlayer);
+		
+		castController.addEventListener(
+			window.cast.framework.RemotePlayerEventType.CURRENT_TIME_CHANGED,
+			() => {
+				if (isCasting && castPlayer) {
+					currentTime = castPlayer.currentTime;
+					// Save progress periodically
+					if (currentTime > 0 && currentTime - lastSavedTime >= 30) {
+						saveProgress();
+					}
+				}
+			}
+		);
+		
+		castController.addEventListener(
+			window.cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
+			() => {
+				if (isCasting && castPlayer) {
+					isPlaying = !castPlayer.isPaused;
+				}
+			}
+		);
+
+		castController.addEventListener(
+			window.cast.framework.RemotePlayerEventType.IS_MUTED_CHANGED,
+			() => {
+				if (isCasting && castPlayer) {
+					isMuted = castPlayer.isMuted;
+				}
+			}
+		);
+
+		castController.addEventListener(
+			window.cast.framework.RemotePlayerEventType.VOLUME_LEVEL_CHANGED,
+			() => {
+				if (isCasting && castPlayer) {
+					volume = castPlayer.volumeLevel;
+				}
+			}
+		);
+	}
+
+	function loadMediaToCast() {
+		if (!castSession) return;
+
+		// Add metadata
+		const metadata = new window.chrome.cast.media.GenericMediaMetadata();
+		metadata.title = title;
+		if (posterUrl) {
+			metadata.images = [new window.chrome.cast.Image(getImageUrl(posterUrl))];
+		}
+		if (seriesDetails && episodeNumber) {
+			metadata.subtitle = `${seriesDetails.series.title} S${seasonNumber}E${episodeNumber}`;
+		}
+
+		// Stream full file to Chromecast (allow it to handle range requests)
+		const fullStreamUrl = `${getApiBase()}/v2/stream/web/${mediaId}?start=0&audio=${selectedAudioTrack}`;
+		const mediaInfoFull = new window.chrome.cast.media.MediaInfo(fullStreamUrl, 'video/mp4');
+		mediaInfoFull.metadata = metadata;
+		mediaInfoFull.streamType = window.chrome.cast.media.StreamType.BUFFERED;
+		mediaInfoFull.duration = duration;
+		
+		if (subtitleTracks.length > 0) {
+			const tracks = subtitleTracks.map((track, index) => {
+				const trackInfo = new window.chrome.cast.media.Track(index + 1, window.chrome.cast.media.TrackType.TEXT);
+				trackInfo.trackContentId = `${getApiBase()}/v2/subtitles/${mediaId}/${index}`;
+				trackInfo.trackContentType = 'text/vtt';
+				trackInfo.subtype = window.chrome.cast.media.TextTrackType.SUBTITLES;
+				trackInfo.name = getSubtitleTrackLabel(track);
+				trackInfo.language = track.language || 'en';
+				return trackInfo;
+			});
+			mediaInfoFull.tracks = tracks;
+		}
+
+		const requestFull = new window.chrome.cast.media.LoadRequest(mediaInfoFull);
+		requestFull.currentTime = currentTime;
+		requestFull.autoplay = true;
+
+		// If subtitle selected
+		if (selectedSubtitleIndex !== null) {
+			requestFull.activeTrackIds = [selectedSubtitleIndex + 1];
+		}
+
+		castSession.loadMedia(requestFull).then(
+			() => { console.log('Cast media loaded'); },
+			(e: any) => { console.error('Cast load error:', e); }
+		);
+		
+		// Pause local video
+		if (videoElement) {
+			videoElement.pause();
+		}
+	}
+
 	// Episode selector state
 	let seriesDetails = $state<SeriesDetails | null>(null);
 	let showEpisodeSelector = $state(false);
@@ -346,7 +537,11 @@
 
 	// Initialize player on mount
 	onMount(async () => {
-		if (!browser || !videoElement) return;
+		if (!browser) return;
+
+		initializeCast();
+
+		if (!videoElement) return;
 
 		// Prevent body scroll when player is open
 		const scrollY = window.scrollY;
@@ -504,6 +699,11 @@
 
 	// Playback controls
 	function togglePlay() {
+		if (isCasting && castController) {
+			castController.playOrPause();
+			return;
+		}
+
 		if (!videoElement) return;
 
 		if (isPlaying) {
@@ -514,12 +714,24 @@
 	}
 
 	function toggleMute() {
+		if (isCasting && castController) {
+			castController.muteOrUnmute();
+			return;
+		}
+
 		if (!videoElement) return;
 		isMuted = !isMuted;
 		videoElement.muted = isMuted;
 	}
 
 	function setVolume(value: number) {
+		if (isCasting && castPlayer && castController) {
+			castPlayer.volumeLevel = value;
+			castController.setVolumeLevel();
+			volume = value;
+			return;
+		}
+
 		if (!videoElement) return;
 		volume = value;
 		videoElement.volume = value;
@@ -531,6 +743,12 @@
 
 	// Seek to absolute position in video - restarts stream from new position
 	async function seek(absoluteTime: number) {
+		if (isCasting && castPlayer && castController) {
+			castPlayer.currentTime = absoluteTime;
+			castController.seek();
+			return;
+		}
+
 		if (!videoElement || isSeeking) return;
 
 		// Clamp to valid range
@@ -927,6 +1145,16 @@
 		</div>
 	{/if}
 
+	<!-- Casting Overlay -->
+	{#if isCasting}
+		<div class="casting-overlay">
+			<svg class="casting-icon" viewBox="0 0 24 24" fill="currentColor">
+				<path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm9 5.27l5.14 5.14c.38.39 1.02.39 1.41 0l5.14-5.14c.39-.38.39-1.02 0-1.41l-5.14-5.14c-.39-.39-1.02-.39-1.41 0l-5.14 5.14c-.39.38-.39 1.02 0 1.41z"/>
+			</svg>
+			<p class="casting-text">Casting to TV</p>
+		</div>
+	{/if}
+
 	<!-- Initial Rating Overlay (Netflix-style, shows first 6 seconds) -->
 	{#if showInitialInfo}
 		<div class="initial-info-overlay">
@@ -1253,6 +1481,20 @@
 						</div>
 					{/if}
 
+					<!-- Cast Button -->
+					{#if showCastButton}
+						<button
+							class="control-button"
+							class:active={isCasting}
+							onclick={() => castContext && castContext.requestSession()}
+							aria-label="Cast"
+						>
+							<svg viewBox="0 0 24 24" fill="currentColor">
+								<path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm9 5.27l5.14 5.14c.38.39 1.02.39 1.41 0l5.14-5.14c.39-.38.39-1.02 0-1.41l-5.14-5.14c-.39-.39-1.02-.39-1.41 0l-5.14 5.14c-.39.38-.39 1.02 0 1.41z"/>
+							</svg>
+						</button>
+					{/if}
+
 					<!-- Fullscreen -->
 					<button
 						class="control-button"
@@ -1498,6 +1740,42 @@
 
 	.retry-button:hover {
 		background: #f40612;
+	}
+
+	/* Casting overlay */
+	.casting-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: black;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		z-index: 50;
+	}
+
+	.casting-icon {
+		width: 64px;
+		height: 64px;
+		color: #e50914;
+		margin-bottom: 16px;
+		opacity: 0.8;
+		animation: pulse 2s infinite;
+	}
+
+	.casting-text {
+		color: white;
+		font-size: 18px;
+		opacity: 0.8;
+	}
+
+	@keyframes pulse {
+		0% { opacity: 0.6; }
+		50% { opacity: 1; }
+		100% { opacity: 0.6; }
 	}
 
 	/* Initial info overlay (Netflix-style rating badge) */

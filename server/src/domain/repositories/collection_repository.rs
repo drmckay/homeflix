@@ -70,4 +70,7 @@ pub trait CollectionRepository: Send + Sync {
 
     /// Finds collection item by collection_id and tmdb_id
     async fn find_item_by_tmdb(&self, collection_id: i64, tmdb_id: i64, media_type: &str) -> Result<Option<CollectionItem>, crate::shared::error::RepositoryError>;
+
+    /// Finds collections containing a specific item by TMDB ID
+    async fn find_collections_by_item_tmdb_id(&self, tmdb_id: i64) -> Result<Vec<Collection>, crate::shared::error::RepositoryError>;
 }

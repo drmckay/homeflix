@@ -404,4 +404,23 @@ impl CollectionRepository for SqliteCollectionRepository {
             }
         }))
     }
+
+    async fn find_collections_by_item_tmdb_id(&self, tmdb_id: i64) -> Result<Vec<Collection>, RepositoryError> {
+        let rows = sqlx::query(
+            r#"SELECT c.* 
+               FROM collections c
+               JOIN collection_items ci ON c.id = ci.collection_id
+               WHERE ci.tmdb_id = ?"#
+        )
+        .bind(tmdb_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut collection_list = Vec::with_capacity(rows.len());
+        for row in rows {
+            collection_list.push(Self::map_row_to_collection(row)?);
+        }
+
+        Ok(collection_list)
+    }
 }

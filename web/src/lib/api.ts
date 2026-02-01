@@ -19,7 +19,10 @@ export function getApiBase(): string {
 
 	if (!browser) {
 		// Server-side: fallback to build-time or default
-		return import.meta.env.VITE_API_URL || 'http://localhost:3000';
+		// Use 127.0.0.1 to avoid potential localhost resolution issues during SSR
+		const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000';
+		// Ensure we don't use localhost if possible
+		return apiUrl.replace('localhost', '127.0.0.1');
 	}
 
 	// Client-side: use relative URLs (empty string) since frontend and backend are on same domain

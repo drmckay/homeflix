@@ -67,6 +67,38 @@
         }
     }
 
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    function handleTouchStart(e: TouchEvent) {
+        touchStartX = e.changedTouches[0].screenX;
+        isPaused = true;
+        if (intervalId) clearInterval(intervalId);
+    }
+
+    function handleTouchMove(e: TouchEvent) {
+        touchEndX = e.changedTouches[0].screenX;
+    }
+
+    function handleTouchEnd() {
+        if (items.length > 1) {
+            const diff = touchStartX - touchEndX;
+            const threshold = 50; // Minimum swipe distance
+
+            if (Math.abs(diff) > threshold) {
+                if (diff > 0) {
+                    // Swipe left -> next slide
+                    nextSlide();
+                } else {
+                    // Swipe right -> prev slide
+                    prevSlide();
+                }
+            }
+        }
+        isPaused = false;
+        resetInterval();
+    }
+
     onMount(() => {
         if (items.length > 1) {
             intervalId = setInterval(nextSlide, AUTO_SCROLL_INTERVAL);
@@ -91,6 +123,9 @@
         onmouseenter={() => { isPaused = true; if (intervalId) clearInterval(intervalId); }}
         onmouseleave={() => { isPaused = false; resetInterval(); }}
         onkeydown={handleKeydown}
+        ontouchstart={handleTouchStart}
+        ontouchmove={handleTouchMove}
+        ontouchend={handleTouchEnd}
     >
         <!-- Background Images with Crossfade -->
         {#each items as media, index (media.id)}
@@ -122,7 +157,7 @@
             <!-- Title with crossfade -->
             {#key currentMedia.id}
                 <h2
-                    class="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white drop-shadow-xl leading-tight line-clamp-3 animate-fade-in"
+                    class="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white drop-shadow-xl leading-tight line-clamp-3 animate-fade-in"
                     style="text-shadow: 2px 4px 12px rgba(0,0,0,0.8)"
                 >
                     {currentMedia.title}

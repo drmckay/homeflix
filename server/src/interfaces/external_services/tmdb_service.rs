@@ -223,11 +223,11 @@ pub trait TmdbReconciler: Send + Sync {
 /// Convenience trait that combines all TMDB interfaces for implementations
 /// that provide full TMDB functionality.
 #[async_trait]
-pub trait TmdbService: TmdbSearcher + TmdbFetcher + TmdbResolver {}
+pub trait TmdbService: TmdbSearcher + TmdbFetcher + TmdbResolver + TmdbSimilarFetcher {}
 
-// Blanket implementation for any type that implements all three traits
+// Blanket implementation for any type that implements all traits
 #[async_trait]
-impl<T> TmdbService for T where T: TmdbSearcher + TmdbFetcher + TmdbResolver {}
+impl<T> TmdbService for T where T: TmdbSearcher + TmdbFetcher + TmdbResolver + TmdbSimilarFetcher {}
 
 // ============================================================================
 // Types used by TMDB interfaces

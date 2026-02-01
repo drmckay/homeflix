@@ -22,13 +22,9 @@
         }
     }
 
-    let sliderTrack: HTMLElement;
     let sliderWrapper: HTMLElement;
-    let scrollPosition = $state(0);
-    let maxScroll = $state(0);
-    let isRowHovered = $state(false);
-    let showLeftButton = $derived(scrollPosition > 10);
-    let showRightButton = $derived(scrollPosition < maxScroll - 10);
+    let showLeftButton = $state(false);
+    let showRightButton = $state(false);
 
     // Create a lookup map for series by ID (using negative ID from synthetic Media)
     let seriesMap = $derived(() => {
@@ -47,20 +43,24 @@
         return undefined;
     }
 
-    function updateMaxScroll() {
-        if (!sliderTrack || !sliderWrapper) return;
-        const trackWidth = sliderTrack.scrollWidth;
-        const wrapperWidth = sliderWrapper.clientWidth;
-        maxScroll = Math.max(0, trackWidth - wrapperWidth);
+    function updateScrollState() {
+        if (!sliderWrapper) return;
+        const { scrollLeft, scrollWidth, clientWidth } = sliderWrapper;
+        showLeftButton = scrollLeft > 10;
+        showRightButton = scrollLeft < scrollWidth - clientWidth - 10;
     }
 
     function scroll(direction: 'left' | 'right') {
         if (!sliderWrapper) return;
-        const scrollAmount = sliderWrapper.clientWidth - 100;
-        const newPosition = direction === 'left'
-            ? Math.max(0, scrollPosition - scrollAmount)
-            : Math.min(maxScroll, scrollPosition + scrollAmount);
-        scrollPosition = newPosition;
+        const scrollAmount = sliderWrapper.clientWidth * 0.8;
+        const targetScroll = direction === 'left'
+            ? sliderWrapper.scrollLeft - scrollAmount
+            : sliderWrapper.scrollLeft + scrollAmount;
+            
+        sliderWrapper.scrollTo({
+            left: targetScroll,
+            behavior: 'smooth'
+        });
     }
 
     function handleKeydown(e: KeyboardEvent) {
@@ -73,32 +73,16 @@
         }
     }
 
-    function handleWheel(e: WheelEvent) {
-        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-        if (delta === 0) return;
-
-        const canScrollRight = scrollPosition < maxScroll - 10;
-        const canScrollLeft = scrollPosition > 10;
-
-        if ((delta > 0 && canScrollRight) || (delta < 0 && canScrollLeft)) {
-            e.preventDefault();
-            const newPosition = Math.max(0, Math.min(maxScroll, scrollPosition + delta));
-            scrollPosition = newPosition;
-        }
-    }
-
     onMount(() => {
-        updateMaxScroll();
-        window.addEventListener('resize', updateMaxScroll);
-        return () => window.removeEventListener('resize', updateMaxScroll);
+        updateScrollState();
+        window.addEventListener('resize', updateScrollState);
+        return () => window.removeEventListener('resize', updateScrollState);
     });
 </script>
 
 <section
-    class="movie-row relative py-0 {isRowHovered ? 'z-[200]' : 'z-0'}"
+    class="movie-row relative my-4 md:my-0 hover:z-[200] z-0 transition-all duration-300 pointer-events-none"
     aria-label="{title} section"
-    onmouseenter={() => isRowHovered = true}
-    onmouseleave={() => isRowHovered = false}
 >
     <!-- Row Header -->
     <div class="px-4 md:px-[60px] mb-2 flex items-center group">
@@ -124,18 +108,17 @@
     </div>
 
     <!-- Slider Container -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="slider-container relative group" onwheel={handleWheel}>
+    <div class="slider-container relative group md:-my-14">
         <!-- Left Gradient Fade -->
         {#if showLeftButton}
-            <div class="absolute left-0 top-0 h-full w-12 md:w-24 bg-gradient-to-r from-[#141414] to-transparent z-30 pointer-events-none"></div>
+            <div class="hidden md:block absolute left-0 top-0 h-full w-12 md:w-24 bg-gradient-to-r from-[#141414] to-transparent z-30 pointer-events-none"></div>
         {/if}
 
         <!-- Left Scroll Button -->
         <button
-            class="absolute left-0 top-0 h-full z-40 w-12 md:w-14 flex items-center justify-center
+            class="hidden md:flex absolute left-0 top-0 md:top-16 bottom-0 md:bottom-16 h-auto z-40 w-12 md:w-14 items-center justify-center
                    bg-black/40 hover:bg-black/70 text-white
-                   transition-all duration-200 cursor-pointer
+                   transition-all duration-200 cursor-pointer pointer-events-auto
                    {showLeftButton ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'}"
             onclick={() => scroll('left')}
             aria-label="Scroll {title} left"
@@ -146,65 +129,69 @@
             </svg>
         </button>
 
-        <!-- Slider Wrapper -->
-        <div bind:this={sliderWrapper} class="slider-wrapper mx-4 md:mx-[60px]">
-            <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
+        <!-- Slider Wrapper - native scrolling -->
+        <div 
+            bind:this={sliderWrapper} 
+            onscroll={updateScrollState}
+            class="slider-wrapper mx-4 md:mx-[60px] overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth snap-x snap-mandatory pointer-events-none"
+        >
+            <!-- Track -->
             <div
-                bind:this={sliderTrack}
                 onkeydown={handleKeydown}
                 tabindex="0"
                 role="group"
                 aria-label="{title} slider"
-                class="slider-track flex gap-2 py-4 pb-8 transition-transform duration-500 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                style="transform: translateX(-{scrollPosition}px);"
+                class="slider-track flex gap-2 py-4 md:py-16 w-max"
             >
                 {#each items as media, index (media.id)}
-                    {#if media.media_type === 'series'}
-                        {@const matchedSeries = getSeriesForMedia(media)}
-                        {#if matchedSeries}
-                            <SeriesCard
-                                series={matchedSeries}
-                                onMoreInfo={handleSeriesClick}
-                                isFirst={index === 0}
-                                isLast={index === items.length - 1}
-                            />
+                    <div class="snap-start scroll-ml-4 md:scroll-ml-[60px] pointer-events-auto">
+                        {#if media.media_type === 'series'}
+                            {@const matchedSeries = getSeriesForMedia(media)}
+                            {#if matchedSeries}
+                                <SeriesCard
+                                    series={matchedSeries}
+                                    onMoreInfo={handleSeriesClick}
+                                    isFirst={index === 0}
+                                    isLast={index === items.length - 1}
+                                />
+                            {:else}
+                                <!-- Fallback: create a minimal Series object from the synthetic Media -->
+                                <SeriesCard
+                                    series={{
+                                        id: media.series_id ?? media.id,
+                                        title: media.title,
+                                        overview: media.overview,
+                                        poster_url: media.poster_url,
+                                        backdrop_url: media.backdrop_url,
+                                        tmdb_id: media.tmdb_id,
+                                        total_seasons: null,
+                                        total_episodes: null,
+                                        rating: media.rating,
+                                        first_air_date: media.release_date
+                                    }}
+                                    onMoreInfo={(s) => {
+                                        // Find the real series from props and pass it
+                                        const realSeries = series.find(rs => rs.id === s.id);
+                                        if (realSeries) handleSeriesClick(realSeries);
+                                        else handleSeriesClick(s);
+                                    }}
+                                    isFirst={index === 0}
+                                    isLast={index === items.length - 1}
+                                />
+                            {/if}
                         {:else}
-                            <!-- Fallback: create a minimal Series object from the synthetic Media -->
-                            <SeriesCard
-                                series={{
-                                    id: media.series_id ?? media.id,
-                                    title: media.title,
-                                    overview: media.overview,
-                                    poster_url: media.poster_url,
-                                    backdrop_url: media.backdrop_url,
-                                    tmdb_id: media.tmdb_id,
-                                    total_seasons: null,
-                                    total_episodes: null,
-                                    rating: media.rating,
-                                    first_air_date: media.release_date
-                                }}
-                                onMoreInfo={(s) => {
-                                    // Find the real series from props and pass it
-                                    const realSeries = series.find(rs => rs.id === s.id);
-                                    if (realSeries) handleSeriesClick(realSeries);
-                                    else handleSeriesClick(s);
-                                }}
-                                isFirst={index === 0}
-                                isLast={index === items.length - 1}
-                            />
+                            <MovieCard {media} onClick={onMovieClick} {onPlay} isFirst={index === 0} isLast={index === items.length - 1} />
                         {/if}
-                    {:else}
-                        <MovieCard {media} onClick={onMovieClick} {onPlay} isFirst={index === 0} isLast={index === items.length - 1} />
-                    {/if}
+                    </div>
                 {/each}
             </div>
         </div>
 
         <!-- Right Scroll Button -->
         <button
-            class="absolute right-0 top-0 h-full z-40 w-12 md:w-14 flex items-center justify-center
+            class="hidden md:flex absolute right-0 top-0 md:top-16 bottom-0 md:bottom-16 h-auto z-40 w-12 md:w-14 items-center justify-center
                    bg-black/40 hover:bg-black/70 text-white
-                   transition-all duration-200 cursor-pointer
+                   transition-all duration-200 cursor-pointer pointer-events-auto
                    {showRightButton ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 pointer-events-none'}"
             onclick={() => scroll('right')}
             aria-label="Scroll {title} right"
@@ -217,27 +204,29 @@
 
         <!-- Right Gradient Fade -->
         {#if showRightButton}
-            <div class="absolute right-0 top-0 h-full w-12 md:w-24 bg-gradient-to-l from-[#141414] to-transparent z-30 pointer-events-none"></div>
+            <div class="hidden md:block absolute right-0 top-0 h-full w-12 md:w-24 bg-gradient-to-l from-[#141414] to-transparent z-30 pointer-events-none"></div>
         {/if}
     </div>
 </section>
 
 <style>
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .scrollbar-hide {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+
     .movie-row {
         overflow: visible;
     }
 
     .slider-container {
         overflow: visible;
-    }
-
-    .slider-wrapper {
-        overflow-x: clip;
-        overflow-y: visible;
-    }
-
-    .slider-track {
-        width: max-content;
     }
 </style>
 

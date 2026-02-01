@@ -28,6 +28,7 @@
 <svelte:head>
 	<title>Homeflix - Your Personal Media Server</title>
 	<link rel="icon" href={favicon} />
+	<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 </svelte:head>
 
 <a

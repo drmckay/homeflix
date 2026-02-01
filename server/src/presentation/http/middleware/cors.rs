@@ -18,12 +18,8 @@ pub fn cors_layer() -> CorsLayer {
     ];
 
     CorsLayer::new()
-        .allow_origin(AllowOrigin::predicate(move |origin, _| {
-            if let Ok(origin_str) = origin.to_str() {
-                allowed_origins.contains(&origin_str)
-            } else {
-                false
-            }
+        .allow_origin(AllowOrigin::predicate(move |_, _| {
+            true // Allow all origins for Chromecast support
         }))
         .allow_methods([
             Method::GET,
@@ -32,7 +28,13 @@ pub fn cors_layer() -> CorsLayer {
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::AUTHORIZATION,
+            header::ACCEPT,
+            header::RANGE,
+            "x-test-chromecast".parse().unwrap(),
+        ])
         .allow_credentials(true)
         .max_age(Duration::from_secs(3600))
 }

@@ -8,6 +8,12 @@ declare global {
 		// interface PageState {}
 		// interface Platform {}
 	}
+	
+	interface Window {
+		cast: any;
+		chrome: any;
+		__onGCastApiAvailable: (isAvailable: boolean) => void;
+	}
 }
 
 export {};

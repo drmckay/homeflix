@@ -75,7 +75,7 @@
     >
         <!-- Image Container (2:3 poster aspect ratio) -->
         <div class="relative aspect-[2/3] w-full overflow-hidden rounded-md bg-gray-800
-                    {isHovered ? 'shadow-2xl shadow-black/80 rounded-b-none' : ''}">
+                    {isHovered ? 'shadow-2xl shadow-black/80' : ''}">
             {#if series.poster_url}
                 <img
                     src={getImageUrl(series.poster_url)}
@@ -95,51 +95,52 @@
                     {series.title}
                 </div>
             {/if}
+
+            <!-- Expanded Info Panel (overlay on hover) -->
+            {#if isHovered}
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent transition-opacity duration-300"></div>
+                <div class="absolute bottom-0 left-0 w-full p-3 space-y-2 z-10">
+                    <!-- Action Buttons Row -->
+                    <div class="flex items-center gap-2">
+                        <!-- Play Button -->
+                        <button
+                            onclick={handlePlayClick}
+                            aria-label="Play {series.title}"
+                            class="rounded-full bg-white p-2 text-black transition hover:bg-white/80"
+                        >
+                            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+
+                        <!-- More Info Button -->
+                        <button
+                            onclick={handleClick}
+                            aria-label="More info about {series.title}"
+                            class="rounded-full border border-gray-400 p-2 text-white transition hover:border-white hover:bg-white/10"
+                        >
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Title -->
+                    <div class="text-sm text-white font-bold truncate drop-shadow-md">{series.title}</div>
+
+                    <!-- Metadata Row -->
+                    <div class="flex items-center gap-2 text-[10px] flex-wrap font-medium">
+                        <span class="text-gray-300 whitespace-nowrap">
+                            {series.total_seasons ?? 0} Season{series.total_seasons !== 1 ? 's' : ''}
+                        </span>
+                        <span class="text-gray-500">•</span>
+                        <span class="text-gray-300 whitespace-nowrap">
+                            {series.total_episodes ?? 0} Ep{series.total_episodes !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                </div>
+            {/if}
         </div>
-
-        <!-- Expanded Info Panel (only visible on hover) -->
-        {#if isHovered}
-            <div class="bg-[#181818] p-2 rounded-b-md space-y-1.5 shadow-2xl shadow-black/80">
-                <!-- Action Buttons Row -->
-                <div class="flex items-center gap-1.5">
-                    <!-- Play Button -->
-                    <button
-                        onclick={handlePlayClick}
-                        aria-label="Play {series.title}"
-                        class="rounded-full bg-white p-1.5 text-black transition hover:bg-white/80"
-                    >
-                        <svg class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8 5v14l11-7z"/>
-                        </svg>
-                    </button>
-
-                    <!-- More Info Button -->
-                    <button
-                        onclick={handleClick}
-                        aria-label="More info about {series.title}"
-                        class="rounded-full border border-gray-500 p-1.5 text-white transition hover:border-white"
-                    >
-                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Title -->
-                <div class="text-xs text-white font-medium truncate">{series.title}</div>
-
-                <!-- Metadata Row -->
-                <div class="flex items-center gap-1.5 text-[10px] flex-wrap">
-                    <span class="text-gray-300 font-medium whitespace-nowrap">
-                        {series.total_seasons ?? 0} Season{series.total_seasons !== 1 ? 's' : ''}
-                    </span>
-                    <span class="text-gray-500">•</span>
-                    <span class="text-gray-400 whitespace-nowrap">
-                        {series.total_episodes ?? 0} Ep{series.total_episodes !== 1 ? 's' : ''}
-                    </span>
-                </div>
-            </div>
-        {/if}
     </div>
 </div>
 

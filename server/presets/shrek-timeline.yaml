@@ -1,0 +1,53 @@
+name: "Shrek Timeline"
+description: "The complete Shrek franchise in chronological order"
+tmdb_collection_id: 2150
+items:
+  - tmdb_id: 417859
+    media_type: "movie"
+    title: "Puss in Boots"
+    timeline_order: 1
+    timeline_year: 2011
+    timeline_notes: "Puss in Boots, a cat who has served as a sword-wielding, hard-drinking companion to the lazy Shrek since the day they met, sets out to find the mythical Feline Fortune and restore his reputation as a hero and earn enough money to娶老婆。But he soon discovers that the fortune is guarded by the three fearsome sisters Kitty, Stiletto and Taffeta, and his quest becomes a fight for the future of the fairytale world."
+    season_range: null
+  - tmdb_id: 808
+    media_type: "movie"
+    title: "Shrek"
+    timeline_order: 2
+    timeline_year: 2001
+    timeline_notes: "An ogre named Shrek falls in love with a princess, but his love life is disrupted when an unwanted creature from his past threatens to ruin everything."
+    season_range: null
+  - tmdb_id: 809
+    media_type: "movie"
+    title: "Shrek 2"
+    timeline_order: 3
+    timeline_year: 2004
+    timeline_notes: "Shrek, Fiona, and Donkey set off to Far, Far Away to meet Fiona's mother and father, the Queen and King. But not everyone is happily ever after, as Shrek and the King find it difficult to get along. But when the Fairy Godmother discovers that Fiona has married Shrek instead of her son Prince Charming as King Harold had promised, she plots to destroy their happiness."
+    season_range: null
+  - tmdb_id: 810
+    media_type: "movie"
+    title: "Shrek the Third"
+    timeline_order: 4
+    timeline_year: 2007
+    timeline_notes: "The King of Far Far Away has died and Shrek and Fiona are to become King & Queen. However, Shrek wants to return to his cozy swamp and live in peace and quiet, so when he finds out there is another heir to the throne, they set off to bring him back to rule the kingdom."
+    season_range: null
+  - tmdb_id: 10192
+    media_type: "movie"
+    title: "Shrek Forever After"
+    timeline_order: 5
+    timeline_year: 2010
+    timeline_notes: "A midlife-crisis burdened Shrek, longing for the days when he felt like a real ogre, makes a pact with magic deal-maker Rumpelstiltskin. But when he's duped and sent to a twisted version of Far Far Away—where Rumpelstiltskin is king, ogres are hunted, and he and Fiona have never met—he sets out to restore his world and reclaim his true love."
+    season_range: null
+  - tmdb_id: 315162
+    media_type: "movie"
+    title: "Puss in Boots: The Last Wish"
+    timeline_order: 6
+    timeline_year: 2022
+    timeline_notes: "Puss in Boots discovers that he has eighty-seven lives. When he saves a young girl from a monstrous spider, he is rewarded with a new life. But when he learns that he now has only one life left, he sets out on a quest to find the mythical Last Wish and become immortal."
+    season_range: null
+  - tmdb_id: 421892
+    media_type: "movie"
+    title: "Shrek 5"
+    timeline_order: 7
+    timeline_year: 2027
+    timeline_notes: "The fifth film in the Shrek franchise. Plot TBA."
+    season_range: null
