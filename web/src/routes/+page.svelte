@@ -135,15 +135,15 @@
 {#if playingMedia}
 	<div class="fixed inset-0 z-[1000] bg-black">
 		<VideoPlayer
-			mediaId={playingMedia.id}
-			title={playingMedia.title}
-			posterUrl={playingMedia.poster_url ? getImageUrl(playingMedia.poster_url) : ''}
-			initialPosition={playFromStart ? 0 : (playingMedia.current_position ?? 0)}
-			contentRating={playingMedia.content_rating ?? undefined}
-			contentWarnings={playingMedia.content_warnings ?? undefined}
-			seriesId={playingMedia.series_id ?? undefined}
-			seasonNumber={playingMedia.season_number ?? undefined}
-			episodeNumber={playingMedia.episode_number ?? undefined}
+			mediaId={playingMedia?.id ?? 0}
+			title={playingMedia?.title ?? ''}
+			posterUrl={playingMedia?.poster_url ? getImageUrl(playingMedia.poster_url) : ''}
+			initialPosition={playFromStart ? 0 : (playingMedia?.current_position ?? 0)}
+			contentRating={playingMedia?.content_rating ?? undefined}
+			contentWarnings={playingMedia?.content_warnings ?? undefined}
+			seriesId={playingMedia?.series_id ?? undefined}
+			seasonNumber={playingMedia?.season_number ?? undefined}
+			episodeNumber={playingMedia?.episode_number ?? undefined}
 			onClose={closePlayer}
 			onEpisodeChange={(episode) => {
 				// Switch to the selected episode

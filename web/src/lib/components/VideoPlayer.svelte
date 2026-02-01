@@ -541,6 +541,28 @@
 
 		initializeCast();
 
+		// Start fetching series details immediately if we know it's a series
+		// This runs in parallel with video loading so the button appears by the time the video starts
+		if (seriesId) {
+			fetchSeriesDetails(seriesId).then(details => {
+				seriesDetails = details;
+				// Filter episodes for current season
+				if (seasonNumber !== undefined) {
+					const season = details.seasons.find(s => s.season_number === seasonNumber);
+					if (season) {
+						currentSeasonEpisodes = season.episodes;
+						selectedSeasonInModal = seasonNumber;
+					}
+				} else if (details.seasons.length > 0) {
+					// Fallback to first season if no season number provided
+					currentSeasonEpisodes = details.seasons[0].episodes;
+					selectedSeasonInModal = details.seasons[0].season_number;
+				}
+			}).catch(err => {
+				console.warn('Failed to fetch series details:', err);
+			});
+		}
+
 		if (!videoElement) return;
 
 		// Prevent body scroll when player is open
@@ -595,27 +617,6 @@
 			}).catch(err => {
 				console.warn('Failed to fetch subtitle capabilities:', err);
 			});
-
-			// Fetch series details if playing an episode
-			if (seriesId) {
-				fetchSeriesDetails(seriesId).then(details => {
-					seriesDetails = details;
-					// Filter episodes for current season
-					if (seasonNumber !== undefined) {
-						const season = details.seasons.find(s => s.season_number === seasonNumber);
-						if (season) {
-							currentSeasonEpisodes = season.episodes;
-							selectedSeasonInModal = seasonNumber;
-						}
-					} else if (details.seasons.length > 0) {
-						// Fallback to first season if no season number provided
-						currentSeasonEpisodes = details.seasons[0].episodes;
-						selectedSeasonInModal = details.seasons[0].season_number;
-					}
-				}).catch(err => {
-					console.warn('Failed to fetch series details:', err);
-				});
-			}
 		} catch (e) {
 			console.error('Player initialization error:', e);
 			error = e instanceof Error ? e.message : 'Unknown error';
