@@ -3,7 +3,7 @@
 //! Provides schema initialization and migrations for HomeFlixD.
 //! Migrated from legacy db.rs to align with Clean Architecture.
 
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Row, Sqlite};
 use tracing::info;
 
 /// Initialize all database tables
@@ -299,6 +299,7 @@ pub async fn initialize_schema(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
 
     // Apply column migrations
     apply_column_migrations(pool).await?;
+    backfill_episode_end(pool).await?;
 
     info!("Database schema initialized successfully");
     Ok(())
@@ -407,6 +408,63 @@ async fn apply_column_migrations(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error>
     Ok(())
 }
 
+/// Backfill episode ranges for media scanned before the episode_end column was
+/// populated. This only updates rows where the filename parser agrees with the
+/// already stored starting episode, so unrelated metadata is left untouched.
+async fn backfill_episode_end(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
+    let rows = sqlx::query(
+        r#"
+        SELECT id, file_path, episode
+        FROM media
+        WHERE media_type = 'episode'
+          AND episode IS NOT NULL
+          AND episode_end IS NULL
+        "#,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let mut updated = 0;
+    for row in rows {
+        let id: i64 = row.try_get("id")?;
+        let file_path: String = row.try_get("file_path")?;
+        let episode: i32 = row.try_get("episode")?;
+
+        let filename = std::path::Path::new(&file_path)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or(&file_path);
+        let parsed = media_identifier::parse(filename);
+
+        let Some(parsed_episode) = parsed.episode_info.episode.map(i32::from) else {
+            continue;
+        };
+        let Some(parsed_episode_end) = parsed.episode_info.episode_end.map(i32::from) else {
+            continue;
+        };
+
+        if parsed_episode == episode && parsed_episode_end > episode {
+            sqlx::query(
+                "UPDATE media SET episode_end = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            )
+            .bind(parsed_episode_end)
+            .bind(id)
+            .execute(pool)
+            .await?;
+            updated += 1;
+        }
+    }
+
+    if updated > 0 {
+        info!(
+            "Backfilled episode_end for {} multi-episode media rows",
+            updated
+        );
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -461,5 +519,41 @@ mod tests {
         initialize_schema(&pool)
             .await
             .expect("Second initialization should be idempotent");
+    }
+
+    #[tokio::test]
+    async fn test_backfill_episode_end_from_filename() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to create test pool");
+
+        initialize_schema(&pool)
+            .await
+            .expect("Failed to initialize schema");
+
+        sqlx::query(
+            r#"
+            INSERT INTO media (file_path, media_type, title, season, episode, episode_end)
+            VALUES (?, 'episode', 'Broken Bow', 1, 1, NULL)
+            "#,
+        )
+        .bind("/media/Star.Trek.Enterprise/1x01-1x02 A Broken Bow incidens.mkv")
+        .execute(&pool)
+        .await
+        .expect("Failed to insert stale media row");
+
+        backfill_episode_end(&pool)
+            .await
+            .expect("Failed to backfill episode_end");
+
+        let episode_end: Option<i32> =
+            sqlx::query_scalar("SELECT episode_end FROM media WHERE title = 'Broken Bow'")
+                .fetch_one(&pool)
+                .await
+                .expect("Failed to fetch episode_end");
+
+        assert_eq!(episode_end, Some(2));
     }
 }
