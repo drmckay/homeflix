@@ -32,6 +32,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copy only the built application (adapter-node bundles all dependencies)
 COPY --from=builder --chown=sveltekit:nodejs /app/build build/
+COPY --from=builder --chown=sveltekit:nodejs /app/server.js server.js
 
 # Switch to non-root user
 USER sveltekit
@@ -51,4 +52,4 @@ LABEL org.opencontainers.image.description="HomeFlix Web Frontend"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Run the application directly with node (no npm/package.json needed)
-CMD ["node", "build"]
+CMD ["node", "server.js"]
