@@ -101,16 +101,16 @@
 	let heroItems = $derived(recentMovies.slice(0, 5));
 
 	// Get all MOVIE items only (exclude episodes)
-	let allMovies = $derived(() => {
+	let allMovies = $derived.by(() => {
 		const items = [...recentMovies];
-		const seen = new Set(items.map((m) => m.id));
+		const seenIds = items.map((m) => m.id);
 
 		// Add items from categories that aren't already in recent
 		for (const categoryItems of Object.values(data.library.categories)) {
 			for (const item of categoryItems) {
-				if (!seen.has(item.id) && item.media_type === 'movie') {
+				if (!seenIds.includes(item.id) && item.media_type === 'movie') {
 					items.push(item);
-					seen.add(item.id);
+					seenIds.push(item.id);
 				}
 			}
 		}
@@ -119,16 +119,14 @@
 
 	// Top 10 Movies (sorted by rating)
 	let topMovies = $derived(
-		allMovies()
-			.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-			.slice(0, 10)
+		[...allMovies].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).slice(0, 10)
 	);
 
 	// Continue Watching (from dedicated backend endpoint)
 	let continueWatching = $derived(data.library.continue_watching ?? []);
 
 	// Collections from API (TMDB-based timeline collections)
-	let collections = $derived(() => data.collections ?? []);
+	let collections = $derived.by(() => data.collections ?? []);
 </script>
 
 <!-- Video Player (fullscreen overlay when playing) -->
@@ -155,13 +153,18 @@
 
 <main
 	id="main-content"
-	class="bg-[#141414] min-h-screen text-white font-sans overflow-x-hidden pb-20"
+	class="min-h-screen overflow-x-hidden bg-[#141414] pb-20 font-sans text-white"
 >
 	<h1 class="sr-only">Homeflix - Browse Your Media Library</h1>
 
-	<Hero items={heroItems} onMoreInfo={openMovieModal} onPlay={playMovie} onPlayFromStart={playMovieFromStart} />
+	<Hero
+		items={heroItems}
+		onMoreInfo={openMovieModal}
+		onPlay={playMovie}
+		onPlayFromStart={playMovieFromStart}
+	/>
 
-	<div class="relative z-20 -mt-24 md:-mt-32 space-y-0">
+	<div class="relative z-20 mt-4 space-y-0 lg:-mt-32">
 		<!-- Continue Watching (first row for easy access) -->
 		{#if continueWatching.length > 0}
 			<MovieRow
@@ -191,31 +194,36 @@
 
 		<!-- Top 10 Movies -->
 		{#if topMovies.length > 0}
-			<Top10Row title="Top 10 Movies" items={topMovies} onMovieClick={openMovieModal} onPlay={playMovie} />
+			<Top10Row
+				title="Top 10 Movies"
+				items={topMovies}
+				onMovieClick={openMovieModal}
+				onPlay={playMovie}
+			/>
 		{/if}
 
 		<!-- Collections -->
-		{#if collections().length > 0}
+		{#if collections.length > 0}
 			<section class="relative py-4" aria-label="Collections section">
-				<div class="px-4 md:px-[60px] mb-2 flex items-center justify-between">
-					<h2 class="text-white text-base md:text-[1.4vw] font-medium">Collections</h2>
-					<a href="/collections" class="text-gray-400 text-sm hover:text-white transition"
+				<div class="mb-2 flex items-center justify-between px-4 md:px-[60px]">
+					<h2 class="text-base font-medium text-white md:text-[1.4vw]">Collections</h2>
+					<a href="/collections" class="text-sm text-gray-400 transition hover:text-white"
 						>See All</a
 					>
 				</div>
 				<div
-					class="px-4 md:px-[60px] grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+					class="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 md:px-[60px] lg:grid-cols-4 xl:grid-cols-5"
 				>
-					{#each collections().slice(0, 5) as collection (collection.id)}
+					{#each collections.slice(0, 5) as collection (collection.id)}
 						<a
 							href="/collections/{collection.id}"
-							class="group relative aspect-video rounded-lg overflow-hidden bg-gray-800 hover:ring-2 hover:ring-white transition-all"
+							class="group relative aspect-video overflow-hidden rounded-lg bg-gray-800 transition-all hover:ring-2 hover:ring-white"
 						>
 							{#if collection.backdrop_url || collection.poster_url}
 								<img
 									src={collection.backdrop_url ?? collection.poster_url}
 									alt={collection.name}
-									class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+									class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 									loading="lazy"
 								/>
 							{:else}
@@ -224,11 +232,11 @@
 							<div
 								class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"
 							></div>
-							<div class="absolute bottom-0 left-0 right-0 p-3">
-								<h3 class="text-white font-semibold text-sm md:text-base line-clamp-1">
+							<div class="absolute right-0 bottom-0 left-0 p-3">
+								<h3 class="line-clamp-1 text-sm font-semibold text-white md:text-base">
 									{collection.name}
 								</h3>
-								<div class="flex items-center justify-between text-xs mt-1">
+								<div class="mt-1 flex items-center justify-between text-xs">
 									<span class="text-gray-400"
 										>{collection.available_items}/{collection.total_items} items</span
 									>
@@ -239,7 +247,7 @@
 									>
 								</div>
 								<!-- Progress Bar -->
-								<div class="h-1 bg-gray-700 rounded-full mt-2 overflow-hidden">
+								<div class="mt-2 h-1 overflow-hidden rounded-full bg-gray-700">
 									<div
 										class="h-full {collection.completion_percentage >= 100
 											? 'bg-green-500'
@@ -258,10 +266,21 @@
 
 <!-- Series Modal -->
 {#if selectedSeries}
-	<SeriesModal series={selectedSeries} onClose={closeSeriesModal} onPlay={playEpisode} {initialEpisodeId} />
+	<SeriesModal
+		series={selectedSeries}
+		onClose={closeSeriesModal}
+		onPlay={playEpisode}
+		{initialEpisodeId}
+	/>
 {/if}
 
 <!-- Movie Modal -->
 {#if selectedMovie}
-	<MovieModal media={selectedMovie} onClose={closeMovieModal} onPlay={playMovie} onPlayFromStart={playMovieFromStart} {similarMedia} />
+	<MovieModal
+		media={selectedMovie}
+		onClose={closeMovieModal}
+		onPlay={playMovie}
+		onPlayFromStart={playMovieFromStart}
+		{similarMedia}
+	/>
 {/if}

@@ -14,7 +14,13 @@
 	import { onMount, onDestroy, untrack } from 'svelte';
 	import { browser } from '$app/environment';
 	import SubtitleGenerator from './SubtitleGenerator.svelte';
-	import { fetchSubtitleCapabilities, fetchSeriesDetails, getImageUrl, getApiBase, type ServiceCapabilities } from '$lib/api';
+	import {
+		fetchSubtitleCapabilities,
+		fetchSeriesDetails,
+		getImageUrl,
+		getApiBase,
+		type ServiceCapabilities
+	} from '$lib/api';
 	import type { SeriesDetails, Media } from '$lib/types';
 
 	// Props using Svelte 5 runes
@@ -65,7 +71,7 @@
 	let showInitialInfo = $state(true);
 	let initialInfoTimeout: ReturnType<typeof setTimeout> | null = null;
 	let lastStreamOffset = $state(untrack(() => initialPosition));
-	
+
 	// Reset showInitialInfo when starting a new stream
 	$effect(() => {
 		// Only reset if stream offset actually changed (new stream started)
@@ -121,7 +127,7 @@
 	let castController: any = $state(null);
 	let castContext: any = $state(null);
 	let showCastButton = $state(false);
-	
+
 	// UI state
 	let isDragging = $state(false);
 
@@ -135,7 +141,7 @@
 	// Initialize Chromecast
 	function initializeCast() {
 		if (!browser) return;
-		
+
 		if (!window.cast) {
 			// If API not loaded yet, retry in a bit
 			if (window.chrome && !window.cast) {
@@ -153,7 +159,7 @@
 
 		try {
 			castContext = window.cast.framework.CastContext.getInstance();
-			
+
 			castContext.setOptions({
 				receiverApplicationId: window.chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
 				autoJoinPolicy: window.chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
@@ -171,11 +177,11 @@
 				window.cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
 				handleCastSessionChange
 			);
-			
+
 			// Check initial state
 			const state = castContext.getCastState();
 			showCastButton = state !== window.cast.framework.CastState.NO_DEVICES_AVAILABLE;
-			
+
 			// If already connected (rejoined), setup session
 			if (castContext.getCurrentSession()) {
 				handleCastSessionChange({
@@ -183,7 +189,6 @@
 					session: castContext.getCurrentSession()
 				});
 			}
-
 		} catch (e) {
 			console.error('Failed to initialize Cast SDK:', e);
 		}
@@ -217,10 +222,10 @@
 
 	function setupRemotePlayer() {
 		if (!castSession) return;
-		
+
 		castPlayer = new window.cast.framework.RemotePlayer();
 		castController = new window.cast.framework.RemotePlayerController(castPlayer);
-		
+
 		castController.addEventListener(
 			window.cast.framework.RemotePlayerEventType.CURRENT_TIME_CHANGED,
 			() => {
@@ -233,7 +238,7 @@
 				}
 			}
 		);
-		
+
 		castController.addEventListener(
 			window.cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
 			() => {
@@ -281,10 +286,13 @@
 		mediaInfoFull.metadata = metadata;
 		mediaInfoFull.streamType = window.chrome.cast.media.StreamType.BUFFERED;
 		mediaInfoFull.duration = duration;
-		
+
 		if (subtitleTracks.length > 0) {
 			const tracks = subtitleTracks.map((track, index) => {
-				const trackInfo = new window.chrome.cast.media.Track(index + 1, window.chrome.cast.media.TrackType.TEXT);
+				const trackInfo = new window.chrome.cast.media.Track(
+					index + 1,
+					window.chrome.cast.media.TrackType.TEXT
+				);
 				trackInfo.trackContentId = `${getApiBase()}/v2/subtitles/${mediaId}/${index}`;
 				trackInfo.trackContentType = 'text/vtt';
 				trackInfo.subtype = window.chrome.cast.media.TextTrackType.SUBTITLES;
@@ -305,10 +313,14 @@
 		}
 
 		castSession.loadMedia(requestFull).then(
-			() => { console.log('Cast media loaded'); },
-			(e: any) => { console.error('Cast load error:', e); }
+			() => {
+				console.log('Cast media loaded');
+			},
+			(e: any) => {
+				console.error('Cast load error:', e);
+			}
 		);
-		
+
 		// Pause local video
 		if (videoElement) {
 			videoElement.pause();
@@ -326,21 +338,25 @@
 		if (!seriesDetails || seasonNumber === undefined || episodeNumber === undefined) return null;
 
 		// 1. Try to find next episode in current season
-		const currentSeason = seriesDetails.seasons.find(s => s.season_number === seasonNumber);
+		const currentSeason = seriesDetails.seasons.find((s) => s.season_number === seasonNumber);
 		if (currentSeason) {
-			const nextEp = currentSeason.episodes.find(e => e.episode_number === episodeNumber! + 1);
+			const nextEp = currentSeason.episodes.find((e) => e.episode_number === episodeNumber! + 1);
 			if (nextEp) return nextEp;
 		}
 
 		// 2. If not found, try first episode of next season
 		// Sort seasons to be sure we get the immediate next one
-		const sortedSeasons = [...seriesDetails.seasons].sort((a, b) => a.season_number - b.season_number);
-		const nextSeason = sortedSeasons.find(s => s.season_number > seasonNumber!);
-		
+		const sortedSeasons = [...seriesDetails.seasons].sort(
+			(a, b) => a.season_number - b.season_number
+		);
+		const nextSeason = sortedSeasons.find((s) => s.season_number > seasonNumber!);
+
 		if (nextSeason && nextSeason.episodes.length > 0) {
 			// Return the first episode of the next season
 			// Sort episodes just in case
-			const sortedEpisodes = [...nextSeason.episodes].sort((a, b) => (a.episode_number ?? 0) - (b.episode_number ?? 0));
+			const sortedEpisodes = [...nextSeason.episodes].sort(
+				(a, b) => (a.episode_number ?? 0) - (b.episode_number ?? 0)
+			);
 			return sortedEpisodes[0];
 		}
 
@@ -457,9 +473,7 @@
 			const checkAllConditions = (): boolean => {
 				if (!videoElement) return false;
 				return (
-					checkBuffer() &&
-					checkVideoRendering() &&
-					videoElement.readyState >= 3 // HAVE_FUTURE_DATA or better
+					checkBuffer() && checkVideoRendering() && videoElement.readyState >= 3 // HAVE_FUTURE_DATA or better
 					// Note: We don't require events here - we check actual state
 					// Events are just triggers to start checking, not requirements
 				);
@@ -551,7 +565,7 @@
 
 		// Additional wait to ensure video is fully ready before playing
 		// This helps ensure the first frame is properly synchronized with audio
-		await new Promise(resolve => setTimeout(resolve, 500));
+		await new Promise((resolve) => setTimeout(resolve, 500));
 
 		try {
 			await videoElement.play();
@@ -580,7 +594,7 @@
 		isLoading = true;
 		error = null;
 		showNextEpisodeButton = false;
-		
+
 		// Reset player state
 		currentTime = 0;
 		duration = 0;
@@ -635,11 +649,13 @@
 				await startStreamFrom(0);
 			}
 			// Fetch subtitle generation capabilities (non-blocking)
-			fetchSubtitleCapabilities().then(caps => {
-				subtitleCapabilities = caps;
-			}).catch(err => {
-				console.warn('Failed to fetch subtitle capabilities:', err);
-			});
+			fetchSubtitleCapabilities()
+				.then((caps) => {
+					subtitleCapabilities = caps;
+				})
+				.catch((err) => {
+					console.warn('Failed to fetch subtitle capabilities:', err);
+				});
 		} catch (e) {
 			console.error('Player initialization error:', e);
 			error = e instanceof Error ? e.message : 'Unknown error';
@@ -666,7 +682,7 @@
 	// React to mediaId changes
 	$effect(() => {
 		if (videoElement && mediaId) {
-			// Use untrack to avoid re-running if internal state changes, 
+			// Use untrack to avoid re-running if internal state changes,
 			// but we want to run when mediaId changes.
 			untrack(() => loadMedia(mediaId));
 		}
@@ -675,23 +691,25 @@
 	// React to seriesId changes
 	$effect(() => {
 		if (seriesId) {
-			fetchSeriesDetails(seriesId).then(details => {
-				seriesDetails = details;
-				// Filter episodes for current season
-				if (seasonNumber !== undefined) {
-					const season = details.seasons.find(s => s.season_number === seasonNumber);
-					if (season) {
-						currentSeasonEpisodes = season.episodes;
-						selectedSeasonInModal = seasonNumber;
+			fetchSeriesDetails(seriesId)
+				.then((details) => {
+					seriesDetails = details;
+					// Filter episodes for current season
+					if (seasonNumber !== undefined) {
+						const season = details.seasons.find((s) => s.season_number === seasonNumber);
+						if (season) {
+							currentSeasonEpisodes = season.episodes;
+							selectedSeasonInModal = seasonNumber;
+						}
+					} else if (details.seasons.length > 0) {
+						// Fallback to first season if no season number provided
+						currentSeasonEpisodes = details.seasons[0].episodes;
+						selectedSeasonInModal = details.seasons[0].season_number;
 					}
-				} else if (details.seasons.length > 0) {
-					// Fallback to first season if no season number provided
-					currentSeasonEpisodes = details.seasons[0].episodes;
-					selectedSeasonInModal = details.seasons[0].season_number;
-				}
-			}).catch(err => {
-				console.warn('Failed to fetch series details:', err);
-			});
+				})
+				.catch((err) => {
+					console.warn('Failed to fetch series details:', err);
+				});
 		}
 	});
 
@@ -732,10 +750,10 @@
 	// Save progress to server
 	function saveProgress(force: boolean = false) {
 		if (!browser) return;
-		
+
 		// Don't save if less than 5 seconds (unless forced)
 		if (!force && currentTime < 5) return;
-		
+
 		// Don't save if we just saved recently (unless forced)
 		if (!force && Math.abs(currentTime - lastSavedTime) < 5) return;
 
@@ -749,7 +767,7 @@
 		// Use sendBeacon with Blob to set Content-Type header
 		const blob = new Blob([data], { type: 'application/json' });
 		const success = navigator.sendBeacon(`${getApiBase()}/v2/progress/${mediaId}`, blob);
-		
+
 		if (success) {
 			lastSavedTime = currentTime;
 		}
@@ -926,7 +944,7 @@
 
 		// Remove track elements
 		const existingTracks = videoElement.querySelectorAll('track');
-		existingTracks.forEach(track => track.remove());
+		existingTracks.forEach((track) => track.remove());
 
 		selectedSubtitleIndex = null;
 		showSubtitleMenu = false;
@@ -967,7 +985,7 @@
 
 	function changeSeason(seasonNum: number) {
 		if (!seriesDetails) return;
-		const season = seriesDetails.seasons.find(s => s.season_number === seasonNum);
+		const season = seriesDetails.seasons.find((s) => s.season_number === seasonNum);
 		if (season) {
 			currentSeasonEpisodes = season.episodes;
 			selectedSeasonInModal = seasonNum;
@@ -1048,7 +1066,7 @@
 				const r = data[i];
 				const g = data[i + 1];
 				const b = data[i + 2];
-				
+
 				// Check for dark pixel (black background)
 				// Relaxed to < 60 to handle compression artifacts and washed out blacks
 				if (r < 60 && g < 60 && b < 60) {
@@ -1076,7 +1094,7 @@
 			} else {
 				consecutiveCreditsFrames = 0;
 				// Don't reset detected state immediately to avoid flickering off
-				// creditsDetected = false; 
+				// creditsDetected = false;
 			}
 		} catch (e) {
 			// Canvas might be tainted or other error
@@ -1180,7 +1198,7 @@
 	function handleContainerClick(e: MouseEvent) {
 		// Don't toggle if clicking on interactive elements (buttons, inputs, controls)
 		const target = e.target as HTMLElement;
-		
+
 		// Check if clicking on a button, input, or control element
 		if (
 			target.tagName === 'BUTTON' ||
@@ -1195,7 +1213,7 @@
 		) {
 			return;
 		}
-		
+
 		// Toggle play/pause for any other click (video area, overlay, etc.)
 		togglePlay();
 	}
@@ -1313,7 +1331,9 @@
 	{#if isCasting}
 		<div class="casting-overlay">
 			<svg class="casting-icon" viewBox="0 0 24 24" fill="currentColor">
-				<path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm9 5.27l5.14 5.14c.38.39 1.02.39 1.41 0l5.14-5.14c.39-.38.39-1.02 0-1.41l-5.14-5.14c-.39-.39-1.02-.39-1.41 0l-5.14 5.14c-.39.38-.39 1.02 0 1.41z"/>
+				<path
+					d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm9 5.27l5.14 5.14c.38.39 1.02.39 1.41 0l5.14-5.14c.39-.38.39-1.02 0-1.41l-5.14-5.14c-.39-.39-1.02-.39-1.41 0l-5.14 5.14c-.39.38-.39 1.02 0 1.41z"
+				/>
 			</svg>
 			<p class="casting-text">Casting to TV</p>
 		</div>
@@ -1324,7 +1344,10 @@
 		<button class="next-episode-button" onclick={() => switchEpisode(nextEpisode!)}>
 			<div class="next-episode-icon">
 				<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" role="img">
-					<path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"></path>
+					<path
+						fill="currentColor"
+						d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"
+					></path>
 				</svg>
 			</div>
 			<span class="next-episode-text">Next Episode</span>
@@ -1354,21 +1377,39 @@
 
 	<!-- Controls Overlay -->
 	<div class="controls-overlay" class:visible={showControls || !isPlaying}>
-		<!-- Top bar - Back button only (Netflix style) -->
+		<!-- Top bar -->
 		<div class="top-bar">
 			<button class="back-button" onclick={() => onClose?.()} aria-label="Go back">
 				<svg viewBox="0 0 24 24" fill="currentColor">
 					<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
 				</svg>
 			</button>
-			<div class="flex-1"></div>
+			<div class="top-actions">
+				{#if showCastButton}
+					<button
+						class="control-button top-cast-button"
+						class:active={isCasting}
+						onclick={() => castContext && castContext.requestSession()}
+						aria-label="Cast"
+					>
+						<svg viewBox="0 0 24 24" fill="currentColor">
+							<path
+								d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm9 5.27l5.14 5.14c.38.39 1.02.39 1.41 0l5.14-5.14c.39-.38.39-1.02 0-1.41l-5.14-5.14c-.39-.39-1.02-.39-1.41 0l-5.14 5.14c-.39.38-.39 1.02 0 1.41z"
+							/>
+						</svg>
+					</button>
+				{/if}
+			</div>
 		</div>
 
 		<!-- Center play button -->
 		{#if !isPlaying && !isLoading}
 			<button class="center-play" onclick={togglePlay} aria-label="Play">
 				<svg viewBox="0 0 24 24" width="24" height="24" fill="none" role="img">
-					<path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"></path>
+					<path
+						fill="currentColor"
+						d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"
+					></path>
 				</svg>
 			</button>
 		{/if}
@@ -1401,46 +1442,81 @@
 			<div class="controls-row">
 				<div class="left-controls">
 					<!-- Play/Pause -->
-					<button class="control-button" onclick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+					<button
+						class="control-button"
+						onclick={togglePlay}
+						aria-label={isPlaying ? 'Pause' : 'Play'}
+					>
 						{#if isPlaying}
 							<svg viewBox="0 0 24 24" fill="currentColor">
 								<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
 							</svg>
 						{:else}
 							<svg viewBox="0 0 24 24" width="24" height="24" fill="none" role="img">
-								<path fill="currentColor" d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"></path>
+								<path
+									fill="currentColor"
+									d="M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z"
+								></path>
 							</svg>
 						{/if}
 					</button>
 
 					<!-- Rewind -->
-					<button class="control-button skip-button" onclick={() => skip(-10)} aria-label="Rewind 10 seconds">
+					<button
+						class="control-button skip-button"
+						onclick={() => skip(-10)}
+						aria-label="Rewind 10 seconds"
+					>
 						<svg viewBox="0 0 24 24" width="24" height="24" fill="none" role="img">
-							<path fill="currentColor" fill-rule="evenodd" d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z" clip-rule="evenodd"></path>
+							<path
+								fill="currentColor"
+								fill-rule="evenodd"
+								d="M11.02 2.05A10 10 0 1 1 2 12H0a12 12 0 1 0 5-9.75V1H3v4a1 1 0 0 0 1 1h4V4H6a10 10 0 0 1 5.02-1.95M2 4v3h3v2H1a1 1 0 0 1-1-1V4zm12.13 12q-.88 0-1.53-.42-.64-.44-1-1.22a5 5 0 0 1-.35-1.86q0-1.05.35-1.85.36-.79 1-1.22A2.7 2.7 0 0 1 14.13 9a2.65 2.65 0 0 1 2.52 1.65q.35.79.35 1.85 0 1.07-.35 1.86a3 3 0 0 1-1.01 1.22 2.7 2.7 0 0 1-1.52.42m0-1.35q.59 0 .91-.56.34-.56.34-1.59 0-1.01-.34-1.58-.33-.57-.91-.57-.6 0-.92.57-.34.56-.34 1.58t.34 1.6q.33.54.91.55m-5.53 1.2v-5.13l-1.6.42V9.82l3.2-.8v6.84z"
+								clip-rule="evenodd"
+							></path>
 						</svg>
 					</button>
 
 					<!-- Forward -->
-					<button class="control-button skip-button" onclick={() => skip(10)} aria-label="Forward 10 seconds">
+					<button
+						class="control-button skip-button"
+						onclick={() => skip(10)}
+						aria-label="Forward 10 seconds"
+					>
 						<svg viewBox="0 0 24 24" width="24" height="24" fill="none" role="img">
-							<path fill="currentColor" fill-rule="evenodd" d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6M8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z" clip-rule="evenodd"></path>
+							<path
+								fill="currentColor"
+								fill-rule="evenodd"
+								d="M6.44 3.69A10 10 0 0 1 18 4h-2v2h4a1 1 0 0 0 1-1V1h-2v1.25A12 12 0 1 0 24 12h-2A10 10 0 1 1 6.44 3.69M22 4v3h-3v2h4a1 1 0 0 0 1-1V4zm-9.4 11.58q.66.42 1.53.42a2.7 2.7 0 0 0 1.5-.42q.67-.44 1.02-1.22.35-.8.35-1.86 0-1.05-.35-1.85A2.65 2.65 0 0 0 14.13 9a2.7 2.7 0 0 0-1.53.43q-.64.44-1 1.22a4.5 4.5 0 0 0-.35 1.85q0 1.07.35 1.86.36.78 1 1.22m2.44-1.49q-.33.56-.91.56-.6 0-.92-.56-.34-.56-.34-1.59 0-1.01.34-1.58.33-.57.91-.57.6 0 .92.57.34.56.34 1.58t-.34 1.6M8.6 10.72v5.14h1.6V9.02l-3.2.8v1.32z"
+								clip-rule="evenodd"
+							></path>
 						</svg>
 					</button>
 
 					<!-- Volume -->
 					<div class="volume-control">
-						<button class="control-button" onclick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'}>
+						<button
+							class="control-button"
+							onclick={toggleMute}
+							aria-label={isMuted ? 'Unmute' : 'Mute'}
+						>
 							{#if isMuted || volume === 0}
 								<svg viewBox="0 0 24 24" fill="currentColor">
-									<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+									<path
+										d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"
+									/>
 								</svg>
 							{:else if volume < 0.5}
 								<svg viewBox="0 0 24 24" fill="currentColor">
-									<path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" />
+									<path
+										d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"
+									/>
 								</svg>
 							{:else}
 								<svg viewBox="0 0 24 24" fill="currentColor">
-									<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+									<path
+										d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
+									/>
 								</svg>
 							{/if}
 						</button>
@@ -1461,8 +1537,12 @@
 				<div class="center-title">
 					<span class="video-title">
 						{#if seriesId && seriesDetails && episodeNumber !== undefined}
-							{@const isGenericTitle = /^Episode\s+(One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|\d+)$/i.test(title)}
-							{seriesDetails.series.title} E{episodeNumber.toString().padStart(2, '0')}{#if !isGenericTitle} {title}{/if}
+							{@const isGenericTitle =
+								/^Episode\s+(One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|\d+)$/i.test(title)}
+							{seriesDetails.series.title} E{episodeNumber
+								.toString()
+								.padStart(2, '0')}{#if !isGenericTitle}
+								{title}{/if}
 						{:else}
 							{title}
 						{/if}
@@ -1480,7 +1560,9 @@
 							title="Generate subtitle with AI"
 						>
 							<svg viewBox="0 0 24 24" fill="currentColor">
-								<path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z" />
+								<path
+									d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"
+								/>
 							</svg>
 							<span class="generate-badge">+</span>
 						</button>
@@ -1495,16 +1577,15 @@
 									aria-label="Subtitle settings"
 								>
 									<svg viewBox="0 0 24 24" fill="currentColor">
-										<path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z" />
+										<path
+											d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"
+										/>
 									</svg>
 								</button>
 								{#if showSubtitleMenu}
 									<div class="subtitle-menu" data-subtitle-size={subtitleFontSize}>
 										<!-- Toggle ON/OFF -->
-										<button
-											class="subtitle-menu-item"
-											onclick={toggleSubtitle}
-										>
+										<button class="subtitle-menu-item" onclick={toggleSubtitle}>
 											{#if selectedSubtitleIndex !== null}
 												<span class="check-mark">✓</span>
 											{/if}
@@ -1517,25 +1598,28 @@
 											<button
 												class="font-size-btn"
 												class:active={subtitleFontSize === 'small'}
-												onclick={() => setSubtitleFontSize('small')}
-											>A</button>
+												onclick={() => setSubtitleFontSize('small')}>A</button
+											>
 											<button
 												class="font-size-btn medium"
 												class:active={subtitleFontSize === 'default'}
-												onclick={() => setSubtitleFontSize('default')}
-											>A</button>
+												onclick={() => setSubtitleFontSize('default')}>A</button
+											>
 											<button
 												class="font-size-btn large"
 												class:active={subtitleFontSize === 'large'}
-												onclick={() => setSubtitleFontSize('large')}
-											>A</button>
+												onclick={() => setSubtitleFontSize('large')}>A</button
+											>
 										</div>
 										<!-- Generate new subtitle option -->
 										{#if subtitleCapabilities?.whisper_available && subtitleCapabilities?.whisper_model_exists}
 											<div class="subtitle-menu-divider"></div>
 											<button
 												class="subtitle-menu-item generate-option"
-												onclick={() => { showSubtitleMenu = false; openSubtitleGenerator(); }}
+												onclick={() => {
+													showSubtitleMenu = false;
+													openSubtitleGenerator();
+												}}
 											>
 												<span class="generate-icon">+</span>
 												Új felirat generálása...
@@ -1554,7 +1638,9 @@
 									aria-label="Subtitle settings"
 								>
 									<svg viewBox="0 0 24 24" fill="currentColor">
-										<path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z" />
+										<path
+											d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"
+										/>
 									</svg>
 								</button>
 								{#if showSubtitleMenu}
@@ -1571,7 +1657,7 @@
 											Ki
 										</button>
 										<!-- Subtitle tracks -->
-										{#each subtitleTracks as track, i}
+										{#each subtitleTracks as track, i (track.index)}
 											<button
 												class="subtitle-menu-item"
 												class:selected={i === selectedSubtitleIndex}
@@ -1590,25 +1676,28 @@
 											<button
 												class="font-size-btn"
 												class:active={subtitleFontSize === 'small'}
-												onclick={() => setSubtitleFontSize('small')}
-											>A</button>
+												onclick={() => setSubtitleFontSize('small')}>A</button
+											>
 											<button
 												class="font-size-btn medium"
 												class:active={subtitleFontSize === 'default'}
-												onclick={() => setSubtitleFontSize('default')}
-											>A</button>
+												onclick={() => setSubtitleFontSize('default')}>A</button
+											>
 											<button
 												class="font-size-btn large"
 												class:active={subtitleFontSize === 'large'}
-												onclick={() => setSubtitleFontSize('large')}
-											>A</button>
+												onclick={() => setSubtitleFontSize('large')}>A</button
+											>
 										</div>
 										<!-- Generate new subtitle option -->
 										{#if subtitleCapabilities?.whisper_available && subtitleCapabilities?.whisper_model_exists}
 											<div class="subtitle-menu-divider"></div>
 											<button
 												class="subtitle-menu-item generate-option"
-												onclick={() => { showSubtitleMenu = false; openSubtitleGenerator(); }}
+												onclick={() => {
+													showSubtitleMenu = false;
+													openSubtitleGenerator();
+												}}
 											>
 												<span class="generate-icon">+</span>
 												Új felirat generálása...
@@ -1627,8 +1716,20 @@
 							onclick={() => (showEpisodeSelector = !showEpisodeSelector)}
 							aria-label="Episodes"
 						>
-							<svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="none" role="img">
-								<path fill="currentColor" fill-rule="evenodd" d="M8 5h14v8h2V5a2 2 0 0 0-2-2H8zm10 4H4V7h14a2 2 0 0 1 2 2v8h-2zM0 13c0-1.1.9-2 2-2h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm14 6v-6H2v6z" clip-rule="evenodd"></path>
+							<svg
+								viewBox="0 0 24 24"
+								width="24"
+								height="24"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								role="img"
+							>
+								<path
+									fill="currentColor"
+									fill-rule="evenodd"
+									d="M8 5h14v8h2V5a2 2 0 0 0-2-2H8zm10 4H4V7h14a2 2 0 0 1 2 2v8h-2zM0 13c0-1.1.9-2 2-2h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm14 6v-6H2v6z"
+									clip-rule="evenodd"
+								></path>
 							</svg>
 						</button>
 					{/if}
@@ -1642,12 +1743,14 @@
 								aria-label="Audio track"
 							>
 								<svg viewBox="0 0 24 24" fill="currentColor">
-									<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+									<path
+										d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+									/>
 								</svg>
 							</button>
 							{#if showAudioMenu}
 								<div class="audio-menu">
-									{#each audioTracks as track, i}
+									{#each audioTracks as track, i (track.index)}
 										<button
 											class="audio-menu-item"
 											class:selected={i === selectedAudioTrack}
@@ -1664,20 +1767,6 @@
 						</div>
 					{/if}
 
-					<!-- Cast Button -->
-					{#if showCastButton}
-						<button
-							class="control-button"
-							class:active={isCasting}
-							onclick={() => castContext && castContext.requestSession()}
-							aria-label="Cast"
-						>
-							<svg viewBox="0 0 24 24" fill="currentColor">
-								<path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm9 5.27l5.14 5.14c.38.39 1.02.39 1.41 0l5.14-5.14c.39-.38.39-1.02 0-1.41l-5.14-5.14c-.39-.39-1.02-.39-1.41 0l-5.14 5.14c-.39.38-.39 1.02 0 1.41z"/>
-							</svg>
-						</button>
-					{/if}
-
 					<!-- Fullscreen -->
 					<button
 						class="control-button"
@@ -1686,11 +1775,15 @@
 					>
 						{#if isFullscreen}
 							<svg viewBox="0 0 24 24" fill="currentColor">
-								<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" />
+								<path
+									d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"
+								/>
 							</svg>
 						{:else}
 							<svg viewBox="0 0 24 24" fill="currentColor">
-								<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+								<path
+									d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
+								/>
 							</svg>
 						{/if}
 					</button>
@@ -1720,8 +1813,12 @@
 		aria-modal="true"
 		aria-label="Episode Selector"
 		tabindex="-1"
-		onclick={(e) => { if (e.target === e.currentTarget) showEpisodeSelector = false; }}
-		onkeydown={(e) => { if (e.key === 'Escape') showEpisodeSelector = false; }}
+		onclick={(e) => {
+			if (e.target === e.currentTarget) showEpisodeSelector = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') showEpisodeSelector = false;
+		}}
 	>
 		<div class="episode-selector-modal">
 			<div class="episode-selector-header">
@@ -1739,10 +1836,12 @@
 							<select
 								id="season-select"
 								class="season-select"
-								value={selectedSeasonInModal ?? seasonNumber ?? seriesDetails.seasons[0]?.season_number}
+								value={selectedSeasonInModal ??
+									seasonNumber ??
+									seriesDetails.seasons[0]?.season_number}
 								onchange={(e) => changeSeason(parseInt((e.target as HTMLSelectElement).value))}
 							>
-								{#each seriesDetails.seasons as season}
+								{#each seriesDetails.seasons as season (season.season_number)}
 									<option value={season.season_number}>
 										Season {season.season_number} ({season.episodes.length} episodes)
 									</option>
@@ -1751,14 +1850,20 @@
 						</div>
 					{/if}
 				</div>
-				<button class="episode-selector-close" onclick={() => (showEpisodeSelector = false)} aria-label="Close">
+				<button
+					class="episode-selector-close"
+					onclick={() => (showEpisodeSelector = false)}
+					aria-label="Close"
+				>
 					<svg viewBox="0 0 24 24" fill="currentColor">
-						<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+						<path
+							d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+						/>
 					</svg>
 				</button>
 			</div>
 			<div class="episode-selector-list">
-				{#each currentSeasonEpisodes as episode}
+				{#each currentSeasonEpisodes as episode (episode.id)}
 					{@const isCurrentEpisode = episode.id === mediaId}
 					{@const isWatched = episode.is_watched}
 					{@const isInProgress = episode.current_position > 0 && !episode.is_watched}
@@ -1789,7 +1894,10 @@
 								<div class="episode-progress-bar">
 									<div
 										class="episode-progress-fill"
-										style="width: {Math.min((episode.current_position / episode.duration) * 100, 100)}%"
+										style="width: {Math.min(
+											(episode.current_position / episode.duration) * 100,
+											100
+										)}%"
 									></div>
 								</div>
 							{/if}
@@ -1956,9 +2064,15 @@
 	}
 
 	@keyframes pulse {
-		0% { opacity: 0.6; }
-		50% { opacity: 1; }
-		100% { opacity: 0.6; }
+		0% {
+			opacity: 0.6;
+		}
+		50% {
+			opacity: 1;
+		}
+		100% {
+			opacity: 0.6;
+		}
 	}
 
 	/* Initial info overlay (Netflix-style rating badge) */
@@ -1972,8 +2086,14 @@
 	}
 
 	@keyframes fade-in {
-		from { opacity: 0; transform: translateX(-10px); }
-		to { opacity: 1; transform: translateX(0); }
+		from {
+			opacity: 0;
+			transform: translateX(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
 	}
 
 	.rating-badge {
@@ -2045,7 +2165,12 @@
 	.top-bar {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
 		padding: 16px 24px;
+		padding-top: max(16px, env(safe-area-inset-top));
+		padding-left: max(24px, env(safe-area-inset-left));
+		padding-right: max(24px, env(safe-area-inset-right));
 	}
 
 	.back-button {
@@ -2069,8 +2194,16 @@
 		height: 100%;
 	}
 
-	.flex-1 {
-		flex: 1;
+	.top-actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-left: auto;
+	}
+
+	.top-cast-button {
+		background: rgba(0, 0, 0, 0.45);
+		border-radius: 50%;
 	}
 
 	/* Center play button */
@@ -2104,6 +2237,9 @@
 	/* Bottom controls */
 	.bottom-controls {
 		padding: 0 24px 16px;
+		padding-left: max(24px, env(safe-area-inset-left));
+		padding-right: max(24px, env(safe-area-inset-right));
+		padding-bottom: max(16px, env(safe-area-inset-bottom));
 	}
 
 	/* Progress container */
@@ -2122,7 +2258,11 @@
 		border-radius: 1.5px;
 		cursor: pointer;
 		outline: none;
-		background: linear-gradient(to right, #e50914 var(--progress, 0%), rgba(255,255,255,0.3) var(--progress, 0%));
+		background: linear-gradient(
+			to right,
+			#e50914 var(--progress, 0%),
+			rgba(255, 255, 255, 0.3) var(--progress, 0%)
+		);
 		transition: height 0.15s ease;
 	}
 
@@ -2186,6 +2326,8 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 12px;
+		min-width: 0;
 	}
 
 	.left-controls,
@@ -2193,15 +2335,18 @@
 		display: flex;
 		align-items: center;
 		gap: 4px;
+		flex-shrink: 0;
 	}
 
 	.center-title {
 		flex: 1;
+		min-width: 0;
 		text-align: center;
 		padding: 0 16px;
 	}
 
 	.video-title {
+		display: block;
 		color: white;
 		font-size: 16px;
 		font-weight: 500;
@@ -2214,6 +2359,7 @@
 	.control-button {
 		width: 40px;
 		height: 40px;
+		flex: 0 0 auto;
 		padding: 8px;
 		background: none;
 		border: none;
@@ -2343,6 +2489,170 @@
 		min-width: 200px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 		z-index: 100;
+	}
+
+	@media (max-width: 640px) {
+		.top-bar {
+			padding: 10px 12px;
+			padding-top: max(10px, env(safe-area-inset-top));
+			padding-left: max(12px, env(safe-area-inset-left));
+			padding-right: max(12px, env(safe-area-inset-right));
+		}
+
+		.back-button,
+		.control-button {
+			width: 38px;
+			height: 38px;
+			padding: 7px;
+		}
+
+		.bottom-controls {
+			padding: 0 12px 12px;
+			padding-left: max(12px, env(safe-area-inset-left));
+			padding-right: max(12px, env(safe-area-inset-right));
+			padding-bottom: max(12px, env(safe-area-inset-bottom));
+		}
+
+		.progress-container {
+			gap: 8px;
+			margin-bottom: 6px;
+		}
+
+		.progress-time {
+			font-size: 12px;
+			min-width: 44px;
+		}
+
+		.controls-row {
+			flex-wrap: wrap;
+			gap: 8px;
+		}
+
+		.center-title {
+			order: -1;
+			flex: 0 0 100%;
+			padding: 0;
+			text-align: left;
+		}
+
+		.video-title {
+			font-size: 13px;
+			line-height: 1.25;
+		}
+
+		.left-controls,
+		.right-controls {
+			gap: 2px;
+		}
+
+		.left-controls {
+			flex: 1 1 auto;
+			min-width: 0;
+		}
+
+		.right-controls {
+			margin-left: auto;
+		}
+
+		.volume-slider {
+			display: none;
+		}
+
+		.subtitle-menu,
+		.audio-menu {
+			right: 0;
+			max-width: calc(100vw - 24px);
+			min-width: 180px;
+		}
+	}
+
+	@media (max-width: 380px) {
+		.controls-row {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.left-controls,
+		.right-controls {
+			width: 100%;
+			justify-content: space-between;
+		}
+
+		.right-controls {
+			margin-left: 0;
+		}
+	}
+
+	@media (max-height: 500px) and (orientation: landscape) {
+		.top-bar {
+			padding-left: max(12px, env(safe-area-inset-left));
+			padding-right: max(12px, env(safe-area-inset-right));
+			padding-top: max(8px, env(safe-area-inset-top));
+			padding-bottom: 8px;
+		}
+
+		.bottom-controls {
+			padding-left: max(12px, env(safe-area-inset-left));
+			padding-right: max(12px, env(safe-area-inset-right));
+			padding-bottom: max(8px, env(safe-area-inset-bottom));
+		}
+
+		.controls-row {
+			flex-wrap: nowrap;
+			gap: 8px;
+		}
+
+		.left-controls {
+			flex: 1 1 auto;
+			min-width: 0;
+			gap: 2px;
+		}
+
+		.right-controls {
+			flex: 0 0 auto;
+			gap: 2px;
+			margin-left: auto;
+		}
+
+		.center-title {
+			display: none;
+		}
+
+		.progress-container {
+			margin-bottom: 4px;
+		}
+
+		.progress-time {
+			font-size: 12px;
+			min-width: 44px;
+		}
+
+		.back-button,
+		.control-button {
+			width: 36px;
+			height: 36px;
+			padding: 7px;
+		}
+
+		.center-play {
+			width: 64px;
+			height: 64px;
+		}
+
+		.center-play svg {
+			width: 32px;
+			height: 32px;
+		}
+
+		.volume-slider {
+			display: none;
+		}
+
+		.subtitle-menu,
+		.audio-menu {
+			max-height: calc(100vh - 96px);
+			overflow-y: auto;
+		}
 	}
 
 	.subtitle-menu-item {
@@ -2739,7 +3049,7 @@
 		z-index: 200;
 		display: flex;
 		align-items: center;
-		box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 		transition: transform 0.2s;
 		animation: slide-up 0.3s ease-out;
 		gap: 12px;
@@ -2763,7 +3073,13 @@
 	}
 
 	@keyframes slide-up {
-		from { transform: translateY(20px); opacity: 0; }
-		to { transform: translateY(0); opacity: 1; }
+		from {
+			transform: translateY(20px);
+			opacity: 0;
+		}
+		to {
+			transform: translateY(0);
+			opacity: 1;
+		}
 	}
 </style>
