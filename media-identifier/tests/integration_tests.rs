@@ -420,6 +420,15 @@ fn test_guessit_multi_episode_range() {
     // Range episodes 1-4
 }
 
+#[test]
+fn test_multi_episode_1x_range() {
+    let r = parse("Star.Trek.Enterprise.1x01-1x02.Broken.Bow.mkv");
+    assert_eq!(r.media_type, MediaType::Episode);
+    assert_eq!(r.episode_info.season, Some(1));
+    assert_eq!(r.episode_info.episode, Some(1));
+    assert_eq!(r.episode_info.episode_end, Some(2));
+}
+
 // -- Alternative Episode Formats --
 
 #[test]

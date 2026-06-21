@@ -127,9 +127,10 @@ impl DefaultIdentificationService {
 
             // For episodes, also try to extract series name from folder structure
             if let Some(series_name) = Self::extract_series_from_folder(path) {
-                // Use folder name if it's more informative than filename-derived title
+                // Episode filenames often contain only the episode title ("1x03 Foo"),
+                // while the parent folder contains the actual series name.
                 if let Some(ref title) = parsed.title {
-                    if series_name.len() > title.len() && !series_name.contains(&title[..]) {
+                    if !Self::titles_overlap(&series_name, title) {
                         parsed.title = Some(series_name);
                     }
                 } else {
@@ -200,6 +201,21 @@ impl DefaultIdentificationService {
         }
 
         false
+    }
+
+    fn normalize_title_for_compare(title: &str) -> String {
+        title
+            .chars()
+            .filter(|c| c.is_alphanumeric())
+            .flat_map(|c| c.to_lowercase())
+            .collect()
+    }
+
+    fn titles_overlap(a: &str, b: &str) -> bool {
+        let a = Self::normalize_title_for_compare(a);
+        let b = Self::normalize_title_for_compare(b);
+
+        !a.is_empty() && !b.is_empty() && (a.contains(&b) || b.contains(&a))
     }
 
     /// Check if folder result is better than filename result
@@ -290,7 +306,7 @@ impl DefaultIdentificationService {
         // Filter out structural folders (Season X, S01, etc.)
         let filtered: Vec<String> = components
             .into_iter()
-            .filter(|c| !RE_STRUCTURE.is_match(c))
+            .filter(|c| !RE_STRUCTURE.is_match(c) && !Self::is_media_root_folder(c))
             .collect();
 
         // Parse the first non-structural folder name
@@ -554,6 +570,9 @@ mod tests {
 
         let result = service.extract_season_episode("S01E01E02").await.unwrap();
         assert_eq!(result, Some((1, vec![1, 2])));
+
+        let result = service.extract_season_episode("1x01-1x02").await.unwrap();
+        assert_eq!(result, Some((1, vec![1, 2])));
     }
 
     #[tokio::test]
@@ -693,5 +712,52 @@ mod tests {
             title
         );
         assert_eq!(parsed.year, Some(2023));
+    }
+
+    #[tokio::test]
+    async fn test_identify_episode_prefers_series_folder_over_episode_title() {
+        let service = DefaultIdentificationService::new();
+        let path = "/media/Star.Trek.Enterprise.S01.2001.S01-S04.COMPLETE.1080p.MiXED.HUN.ENG-FOX/Star.Trek.Enterprise.S01.2001.BluRay.HUN.ENG-FOX/1x03 Megszoksz vagy megszöksz.mkv";
+
+        let result = service.identify_content(path, Some(2400)).await.unwrap();
+
+        assert_eq!(result.media_type, MediaType::Episode);
+        assert_eq!(result.season, Some(1));
+        assert_eq!(result.episode, Some(3));
+        assert!(
+            result.title.contains("Star Trek Enterprise"),
+            "title '{}' should come from the series folder, not the episode filename",
+            result.title
+        );
+    }
+
+    #[tokio::test]
+    async fn test_identify_episode_1x_multi_episode_range() {
+        let service = DefaultIdentificationService::new();
+        let path = "/media/Star.Trek.Enterprise.S01.2001.S01-S04.COMPLETE.1080p.MiXED.HUN.ENG-FOX/Star.Trek.Enterprise.S01.2001.BluRay.HUN.ENG-FOX/1x01-1x02 A Broken Bow incidens.mkv";
+
+        let result = service.identify_content(path, Some(5200)).await.unwrap();
+
+        assert_eq!(result.media_type, MediaType::Episode);
+        assert_eq!(result.season, Some(1));
+        assert_eq!(result.episode, Some(1));
+        assert_eq!(result.multi_episode, Some(vec![1, 2]));
+    }
+
+    #[tokio::test]
+    async fn test_identify_episode_does_not_use_media_root_as_series_title() {
+        let service = DefaultIdentificationService::new();
+        let path = "/media/TV/Breaking.Bad.S01E01.Pilot.mkv";
+
+        let result = service.identify_content(path, Some(2400)).await.unwrap();
+
+        assert_eq!(result.media_type, MediaType::Episode);
+        assert_eq!(result.season, Some(1));
+        assert_eq!(result.episode, Some(1));
+        assert!(
+            result.title.contains("Breaking Bad"),
+            "title '{}' should not be replaced by the TV media root folder",
+            result.title
+        );
     }
 }

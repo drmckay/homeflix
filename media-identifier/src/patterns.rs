@@ -22,6 +22,8 @@ lazy_static! {
         Regex::new(r"(?i)\bS(\d{1,2})E(\d{1,3})(?:E(\d{1,3}))?\b").unwrap(),
         // S01E01-E02 format
         Regex::new(r"(?i)\bS(\d{1,2})E(\d{1,3})-E?(\d{1,3})\b").unwrap(),
+        // 1x01-1x02 or 1x01-02 format
+        Regex::new(r"(?i)\b(\d{1,2})x(\d{1,3})-(?:\d{1,2}x)?(\d{1,3})\b").unwrap(),
         // 1x01 format
         Regex::new(r"(?i)\b(\d{1,2})x(\d{1,3})\b").unwrap(),
         // Season.01 or Season 1
@@ -206,6 +208,20 @@ impl SeasonEpisodePattern {
                         });
                     }
                     2 => {
+                        // 1x01-1x02 or 1x01-02 format
+                        let season: u16 = cap.get(1).unwrap().as_str().parse().unwrap();
+                        let episode: u16 = cap.get(2).unwrap().as_str().parse().unwrap();
+                        let episode_end: u16 = cap.get(3).unwrap().as_str().parse().unwrap();
+                        matches.push(Match {
+                            start: full_match.start(),
+                            end: full_match.end(),
+                            value: format!("S{:02}E{:02}-E{:02}", season, episode, episode_end),
+                            raw: format!("{}|{}|{}", season, episode, episode_end),
+                            category: MatchCategory::Episode,
+                            confidence: 100,
+                        });
+                    }
+                    3 => {
                         // 1x01 format
                         let season: u16 = cap.get(1).unwrap().as_str().parse().unwrap();
                         let episode: u16 = cap.get(2).unwrap().as_str().parse().unwrap();
@@ -218,7 +234,7 @@ impl SeasonEpisodePattern {
                             confidence: 95,
                         });
                     }
-                    3 => {
+                    4 => {
                         // Season X
                         let season: u16 = cap.get(1).unwrap().as_str().parse().unwrap();
                         matches.push(Match {
@@ -230,7 +246,7 @@ impl SeasonEpisodePattern {
                             confidence: 85,
                         });
                     }
-                    4 => {
+                    5 => {
                         // Episode X
                         let episode: u16 = cap.get(1).unwrap().as_str().parse().unwrap();
                         matches.push(Match {
@@ -651,6 +667,13 @@ mod tests {
     fn test_season_episode_range() {
         let matches = SeasonEpisodePattern::find_matches("Show.S01E01-E02.720p");
         assert!(!matches.is_empty());
+    }
+
+    #[test]
+    fn test_season_episode_1x_range() {
+        let matches = SeasonEpisodePattern::find_matches("Show.1x01-1x02.720p");
+        assert!(!matches.is_empty());
+        assert_eq!(matches[0].raw, "1|1|2");
     }
 
     #[test]

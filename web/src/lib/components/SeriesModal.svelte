@@ -143,6 +143,14 @@
         const mins = Math.floor(seconds / 60);
         return `${mins}m`;
     }
+
+    function formatEpisodeNumber(episode: Media, fallback: number): string {
+        if (!episode.episode_number) return String(fallback);
+        if (episode.episode_end && episode.episode_end > episode.episode_number) {
+            return `${episode.episode_number}-${episode.episode_end}`;
+        }
+        return String(episode.episode_number);
+    }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -251,7 +259,7 @@
                                 handleSeasonChange(seasonNum);
                             }}
                         >
-                            {#each details.seasons as season}
+                            {#each details.seasons as season (season.season_number)}
                                 <option value={season.season_number}>
                                     Season {season.season_number}
                                 </option>
@@ -282,7 +290,7 @@
                 <!-- Episodes List -->
                 {#if selectedSeason}
                     <div class="space-y-3" bind:this={episodeListRef}>
-                        {#each selectedSeason.episodes as episode, index}
+                        {#each selectedSeason.episodes as episode, index (episode.id)}
                             {@const isHighlighted = episode.id === highlightEpisodeId}
                             {@const isInProgress = episode.current_position > 0 && !episode.is_watched}
                             <button
@@ -294,7 +302,7 @@
                                 <!-- Episode Number -->
                                 <div class="flex-shrink-0 w-8 text-2xl font-bold transition
                                     {isHighlighted ? 'text-red-500' : 'text-gray-500 group-hover:text-white'}">
-                                    {episode.episode_number ?? index + 1}
+                                    {formatEpisodeNumber(episode, index + 1)}
                                 </div>
 
                                 <!-- Thumbnail -->

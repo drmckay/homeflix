@@ -43,6 +43,7 @@ fn series_to_library_media(series: &Series, created_at: &chrono::DateTime<chrono
         series_id: Some(series_id),
         season_number: None,
         episode_number: None,
+        episode_end: None,
         created_at: created_at.to_rfc3339(),
         tmdb_id: series.tmdb_id,
         original_title: series.original_title.clone(),

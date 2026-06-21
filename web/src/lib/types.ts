@@ -14,6 +14,7 @@ export interface Media {
     series_id: number | null;
     season_number: number | null;
     episode_number: number | null;
+    episode_end: number | null;
     created_at: string;
     tmdb_id: number | null;
     original_title: string | null;
